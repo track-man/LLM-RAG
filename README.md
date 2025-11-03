@@ -121,7 +121,7 @@ python experiments/run_experiments.py
 - 实验与评估：`pandas`、`matplotlib`
 
 
-## 团队分工建议
+## 团队分工
 - **项目经理**：管理`main.py`、`config.py`与整体进度，协调模块集成。
 - **主程**：负责`src/core/rag_pipeline.py`的流程控制代码，确保模块间数据流转。
 - **索引与验证模块开发**（3人）：分别负责`data_processing`、`retrieval`、`verification`模块的实现与优化。
