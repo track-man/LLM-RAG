@@ -7,36 +7,66 @@
 ## 系统架构
 
 llm_rag_factuality/
+
 ├── main.py                 # 主程序入口（初始化+用户交互）
+
 ├── config.py               # 全局配置（模型路径、参数等）
+
 ├── requirements.txt        # 依赖库列表
+
 ├── .env                    # 敏感信息（API密钥等）
 ├── src/
+
 │   ├── core/
+
 │   │   └── rag_pipeline.py # 主流程控制代码（串联各模块）
+
 │   ├── data_processing/    # 数据处理与索引模块
+
 │   │   ├── document_loader.py  # 文档加载
+
 │   │   ├── text_splitter.py    # 文本分块
+
 │   │   └── embedding_handler.py # 嵌入生成与存储
+
 │   ├── retrieval/          # 检索模块
+
 │   │   └── chroma_retriever.py # 基于Chroma的检索
+
 │   ├── llm/                # LLM交互模块
+
 │   │   ├── deepseek_client.py  # DeepseekV3调用封装
+
 │   │   └── prompt_templates.py # 各类prompt模板
+
 │   ├── verification/       # 验证模块
+
 │   │   └── fact_checker.py     # 回答与文档一致性验证
+
 │   └── correction/         # 纠正模块
+
 │       └── answer_corrector.py # 基于验证结果修正回答
+
 ├── data/
+
 │   ├── raw_docs/           # 原始文档
+
 │   ├── processed_docs/     # 处理后的文档
+
 │   └── chroma_db/          # Chroma向量库持久化数据
+
 ├── experiments/            # 实验相关
+
 │   ├── datasets/           # TruthfulQA、FaithDial等数据集
+
 │   ├── run_experiments.py  # 实验自动化脚本
+
 │   └── evaluation_metrics.py # 评估指标计算（幻觉率、准确率等）
+
 └── results/                # 实验结果
+
     ├── logs/               # 日志文件
+
     └── figures/            # 可视化图表
 
 
