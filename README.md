@@ -1,110 +1,80 @@
-# LLM-RAG
+# RAG减弱大模型幻觉系统 - README
 
 ## 项目介绍
 本项目旨在通过**检索增强生成（RAG）+ 多轮验证纠正**的技术方案，降低大模型（DeepseekV3）输出的幻觉率，提升回答的事实准确性。系统采用模块化设计，支持分工开发与灵活扩展，同时具备实验友好的特性，可基于TruthfulQA、FaithDial等数据集进行自动化测试与指标评估。
 
 
 ## 系统架构
-
+```
 llm_rag_factuality/
-
 ├── main.py                 # 主程序入口（初始化+用户交互）
-
 ├── config.py               # 全局配置（模型路径、参数等）
-
 ├── requirements.txt        # 依赖库列表
-
 ├── .env                    # 敏感信息（API密钥等）
 ├── src/
-
 │   ├── core/
-
 │   │   └── rag_pipeline.py # 主流程控制代码（串联各模块）
-
 │   ├── data_processing/    # 数据处理与索引模块
-
 │   │   ├── document_loader.py  # 文档加载
-
 │   │   ├── text_splitter.py    # 文本分块
-
 │   │   └── embedding_handler.py # 嵌入生成与存储
-
 │   ├── retrieval/          # 检索模块
-
 │   │   └── chroma_retriever.py # 基于Chroma的检索
-
 │   ├── llm/                # LLM交互模块
-
 │   │   ├── deepseek_client.py  # DeepseekV3调用封装
-
 │   │   └── prompt_templates.py # 各类prompt模板
-
 │   ├── verification/       # 验证模块
-
 │   │   └── fact_checker.py     # 回答与文档一致性验证
-
 │   └── correction/         # 纠正模块
-
 │       └── answer_corrector.py # 基于验证结果修正回答
-
 ├── data/
-
 │   ├── raw_docs/           # 原始文档
-
 │   ├── processed_docs/     # 处理后的文档
-
 │   └── chroma_db/          # Chroma向量库持久化数据
-
 ├── experiments/            # 实验相关
-
 │   ├── datasets/           # TruthfulQA、FaithDial等数据集
-
 │   ├── run_experiments.py  # 实验自动化脚本
-
 │   └── evaluation_metrics.py # 评估指标计算（幻觉率、准确率等）
-
 └── results/                # 实验结果
-
     ├── logs/               # 日志文件
-
     └── figures/            # 可视化图表
-
+```
 
 
 ## 快速开始
 
 ### 环境准备
 1. 安装依赖：
-bash
+```bash
 pip install -r requirements.txt
-
+```
 2. 配置敏感信息：在 `.env` 文件中填入DeepseekV3的API密钥：
-
+```
 DEEPSEEK_API_KEY=your_api_key_here
-
+```
 
 
 ### 系统初始化（构建向量库）
 首次运行需加载文档并构建Chroma向量库：
-python
+```python
 # 执行main.py中的init_system()函数
 python main.py --init
-
+```
 
 
 ### 启动交互式查询
 运行主程序，输入查询即可体验RAG+幻觉纠正流程：
-bash
+```bash
 python main.py
-
+```
 示例查询：`BAAI/bge-base-en-v1.5 嵌入模型的输出向量维度是多少？`
 
 
 ### 实验模式（批量测试）
 通过自动化脚本运行数据集测试，评估幻觉率、准确率等指标：
-bash
+```bash
 python experiments/run_experiments.py
-
+```
 
 
 ## 核心模块功能
