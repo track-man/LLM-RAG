@@ -41,6 +41,10 @@ llm_rag_factuality/
 ```
 
 
+## 系统流程图
+<img width="2946" height="5044" alt="exported_image" src="https://github.com/user-attachments/assets/89771425-d7da-4839-ac90-e7ea4957bf0c" />
+
+
 ## 快速开始
 
 ### 环境准备
