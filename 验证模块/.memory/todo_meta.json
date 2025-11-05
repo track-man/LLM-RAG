@@ -1,0 +1,69 @@
+{
+  "todos": {
+    "Coordinator": {
+      "1": {
+        "id": "1",
+        "content": "项目环境准备与基础配置",
+        "details": "1. 创建完整的项目目录结构\n2. 生成requirements.txt依赖文件\n3. 创建config.py配置文件\n4. 创建.env环境变量模板\n5. 创建基础目录结构（data/raw_docs, data/processed_docs, data/chroma_db等）",
+        "status": "pending",
+        "priority": "high"
+      },
+      "2": {
+        "id": "2",
+        "content": "数据处理与索引模块开发",
+        "details": "1. 实现document_loader.py - 文档加载模块\n2. 实现text_splitter.py - 文本分块模块\n3. 实现embedding_handler.py - 嵌入生成与存储模块\n4. 集成Chroma向量数据库",
+        "status": "pending",
+        "priority": "high"
+      },
+      "3": {
+        "id": "3",
+        "content": "检索模块开发",
+        "details": "1. 实现chroma_retriever.py - 基于Chroma的检索功能\n2. 实现相关文档块检索和排序\n3. 集成向量相似度计算",
+        "status": "pending",
+        "priority": "high"
+      },
+      "4": {
+        "id": "4",
+        "content": "LLM交互模块开发",
+        "details": "1. 实现deepseek_client.py - DeepseekV3 API调用封装\n2. 实现prompt_templates.py - 各类prompt模板（生成、验证、纠正）\n3. 集成API密钥管理和错误处理",
+        "status": "pending",
+        "priority": "high"
+      },
+      "5": {
+        "id": "5",
+        "content": "验证与纠正模块开发",
+        "details": "1. 实现fact_checker.py - 回答与文档一致性验证\n2. 实现answer_corrector.py - 基于验证结果的回答纠正\n3. 实现多轮验证纠正机制",
+        "status": "completed",
+        "priority": "high"
+      },
+      "6": {
+        "id": "6",
+        "content": "主流程控制模块开发",
+        "details": "1. 实现rag_pipeline.py - 串联各模块的主流程控制\n2. 集成'检索→生成→验证→纠正'完整流程\n3. 实现流程日志和错误处理",
+        "status": "pending",
+        "priority": "high"
+      },
+      "7": {
+        "id": "7",
+        "content": "实验与评估模块开发",
+        "details": "1. 实现run_experiments.py - 批量测试自动化脚本\n2. 实现evaluation_metrics.py - 评估指标计算\n3. 创建结果日志和可视化功能",
+        "status": "pending",
+        "priority": "medium"
+      },
+      "8": {
+        "id": "8",
+        "content": "系统集成与测试",
+        "details": "1. 完善main.py主程序逻辑\n2. 集成所有模块并进行端到端测试\n3. 创建示例文档和测试用例\n4. 验证系统初始化和交互式查询功能",
+        "status": "pending",
+        "priority": "high"
+      },
+      "9": {
+        "id": "9",
+        "content": "文档完善与部署准备",
+        "details": "1. 完善README.md使用说明\n2. 创建LICENSE文件\n3. 添加代码注释和API文档\n4. 准备部署指南",
+        "status": "pending",
+        "priority": "low"
+      }
+    }
+  }
+}
