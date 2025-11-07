@@ -1,0 +1,23 @@
+# 向量数据库
+chromadb==0.4.24
+
+# 嵌入模型
+sentence-transformers==2.2.2
+
+# LLM调用
+requests==2.31.0
+
+# 数据处理
+langchain==0.1.16
+
+# 文档加载
+python-docx==1.1.0
+pdfplumber==0.10.3
+
+# 实验与评估
+pandas==2.2.1
+matplotlib==3.8.3
+python-dotenv==1.0.1
+
+# 日志与其他
+logging==0.4.9.6
