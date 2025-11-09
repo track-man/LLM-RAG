@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from .llm_client import LLMAdapter
+from .deepseek_client import LLMAdapter
 
 class IntentAwareCorrector:
     """意图感知的答案纠正器"""
@@ -174,4 +174,5 @@ class IntentAwareCorrector:
         修正后的观点综述应体现多元视角和客观分析。
 
         修正后的观点综述：
+
         """
