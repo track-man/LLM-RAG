@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 """
 大语言模型幻觉检测与纠正系统 - Prompt模板整合文件
 
@@ -412,4 +412,5 @@ correction_prompt = templates.get_correction_prompt(
     original_answer="需要验证的答案",
     verification_summary="验证结果摘要"
 )
+
 """
