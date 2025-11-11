@@ -8,17 +8,6 @@
 - 答案纠正模板
 """
 
-#!/usr/bin/env python3
-"""
-大语言模型幻觉检测与纠正系统 - Prompt模板整合文件
-
-本文件整合了系统中使用的所有Prompt模板，包括：
-- 意图分类模板
-- 声明提取模板  
-- 事实验证模板
-- 答案纠正模板
-"""
-
 class PromptTemplates:
     """Prompt模板管理器 - 集中管理所有提示词模板"""
     
@@ -397,4 +386,5 @@ if __name__ == "__main__":
     variables = validator.extract_template_variables(template)
     print(f"\n=== 模板变量分析 ===")
     print(f"提取到的变量: {variables}")
+
     print(f"验证结果: {validator.validate_template(template, variables)}")
