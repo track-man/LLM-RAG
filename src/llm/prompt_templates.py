@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 大语言模型幻觉检测与纠正系统 - 增强版Prompt模板管理
 位于: src/llm/prompt_templates.py
@@ -460,4 +459,5 @@ print("初始回答:", result['initial_answer'])
 print("验证后回答:", result['verified_answer'])
 print("幻觉分析:", result['hallucination_analysis'])
 print("比较报告:", result['comparison_report'])
+
 """
