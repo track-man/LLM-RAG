@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from .deepseek_client import LLMAdapter
+from src.llm.deepseek_client  import LLMAdapter
 
 class IntentAwareCorrector:
     """意图感知的答案纠正器"""

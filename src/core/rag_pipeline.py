@@ -10,7 +10,7 @@ from src.llm.prompt_templates import (
    # get_verification_prompt,
     get_correction_prompt
 )
-from src.llm.deepseek_client import llm_inference
+from src.llm.deepseek_client  import llm_inference
 from src.verification.fact_checker import verify_answer
 from src.correction.answer_corrector import correct_answer
 import config
