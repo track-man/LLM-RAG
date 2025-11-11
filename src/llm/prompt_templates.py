@@ -339,7 +339,7 @@ class TemplateValidator:
 """
 # ==================== 使用示例 ====================
 def usage_example():
-    """使用示例"""
+""" """
     
     # 初始化模板管理器
     templates = PromptTemplates()
@@ -388,4 +388,5 @@ if __name__ == "__main__":
     print(f"提取到的变量: {variables}")
 
     print(f"验证结果: {validator.validate_template(template, variables)}")
+
 """
