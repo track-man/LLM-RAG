@@ -175,7 +175,7 @@ class DocumentLoader:
             # 尝试使用python-docx
             from docx import Document
             
-            doc = Document(file_path)
+            doc = Document(str(file_path))
             text_content = []
             
             # 提取段落文本
