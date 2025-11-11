@@ -4,6 +4,7 @@
 """
 import os
 import logging
+import csv
 from typing import List, Dict, Any
 from pathlib import Path
 import config
@@ -17,7 +18,7 @@ class DocumentLoader:
     def __init__(self):
         """初始化文档加载器"""
         # 支持的文件扩展名
-        self.supported_extensions = {'.txt', '.md', '.pdf', '.docx', '.doc'}
+        self.supported_extensions = {'.txt', '.md', '.pdf', '.docx', '.doc', '.csv'}
         
         # 文件编码格式
         self.encodings = ['utf-8', 'gbk', 'gb2312', 'latin1']
@@ -55,12 +56,7 @@ class DocumentLoader:
                         document = {
                             "text": doc_content,
                             "metadata": {
-                                "source": str(file_path.relative_to(doc_path)),
-                                "filename": file_path.name,
-                                "file_path": str(file_path),
-                                "file_size": file_path.stat().st_size,
-                                "file_extension": file_path.suffix.lower(),
-                                "last_modified": file_path.stat().st_mtime
+                                "source": str(file_path),
                             }
                         }
                         documents.append(document)
@@ -90,11 +86,44 @@ class DocumentLoader:
             content = self._load_pdf(file_path)
         elif file_path.suffix.lower() in ['.docx', '.doc']:
             content = self._load_word_document(file_path)
+        elif file_path.suffix.lower() == '.csv':
+            content = self._load_csv(file_path)
         else:
             # 文本文件
             content = self._load_text_file(file_path)
         
         return content
+    
+    def _load_csv(self, file_path: Path) -> str:
+        """
+        加载csv文件
+        
+        Args:
+            file_path: csv文件路径
+            
+        Returns:
+            csv文件文本内容
+        """
+        for encoding in self.encodings:
+            try:
+                with open(file_path, 'r', encoding=encoding, newline='') as csvfile:
+                    # 读取CSV内容
+                    csv_reader = csv.reader(csvfile)
+                    rows = list(csv_reader)
+                    
+                    # 将内容转换为字符串
+                    result_lines = []
+                    for row in rows:
+                        # 将每行转换为逗号分隔的字符串
+                        result_lines.append(','.join(str(cell) for cell in row))
+                    
+                    return '\n'.join(result_lines)
+                    
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                logger.warning(f"加载csv文档失败 {file_path.name}: {str(e)}")
+        return ""
     
     def _load_text_file(self, file_path: Path) -> str:
         """
