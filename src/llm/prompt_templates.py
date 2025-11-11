@@ -215,7 +215,7 @@ class PromptTemplates:
     {overall_assessment}
     """
 
-    def get_initial_answer_prompt(self, question: str) -> str:
+    def get_initial_prompt(self, question: str) -> str:
         """获取初始回答生成提示词"""
         return self.INITIAL_ANSWER_TEMPLATE.format(question=question)
     
