@@ -24,10 +24,10 @@ class EmbeddingHandler:
         初始化嵌入处理器
         
         Args:
-            model_name: 嵌入模型名称，默认为config.EMBEDDING_MODEL
+            model_name: 嵌入模型名称，默认为config.EMBEDDING_CONFIG['model_name']
             device: 计算设备，'cuda'或'cpu'，自动检测
         """
-        self.model_name = model_name or config.EMBEDDING_MODEL
+        self.model_name = model_name or config.EMBEDDING_CONFIG['model_name']
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         
         # 加载嵌入模型
