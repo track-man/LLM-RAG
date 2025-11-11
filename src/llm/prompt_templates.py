@@ -7,7 +7,6 @@
 - 事实验证模板
 - 答案纠正模板
 """
-
 class PromptTemplates:
     """Prompt模板管理器 - 集中管理所有提示词模板"""
     
@@ -311,7 +310,21 @@ class PromptTemplates:
             "self_revision": "自我修正模板"
         }
 
+# 测试代码 - 修复第357行的问题
+if __name__ == "__main__":
+    # 创建实例
+    templates = PromptTemplates()
+    
+    # 测试方法调用 - 修复第357行的错误
+    query = "测试查询"
+    try:
+        intent_prompt = templates.get_intent_classification_prompt(query)
+        print("✅ 方法调用成功")
+        print(f"生成的提示词: {intent_prompt[:100]}...")
+    except AttributeError as e:
+        print(f"❌ 方法调用失败: {e}")
 
+# ==================== 模板验证器 (正式运行时删)====================
 class TemplateValidator:
     """模板验证器 - 验证模板格式和完整性"""
     
@@ -339,7 +352,6 @@ class TemplateValidator:
 """
 # ==================== 使用示例 ====================
 def usage_example():
-    """使用示例"""
     
     # 初始化模板管理器
     templates = PromptTemplates()
@@ -386,6 +398,5 @@ if __name__ == "__main__":
     variables = validator.extract_template_variables(template)
     print(f"\n=== 模板变量分析 ===")
     print(f"提取到的变量: {variables}")
-
     print(f"验证结果: {validator.validate_template(template, variables)}")
 """
