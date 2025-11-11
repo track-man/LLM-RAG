@@ -1,0 +1,18 @@
+[
+  {
+    "dataset": "TruthfulQA_TruthfulQA",
+    "total_samples": 790,
+    "intent_distribution": {
+      "factual_query": 774,
+      "method_query": 8,
+      "comparison_query": 7,
+      "opinion_query": 1
+    },
+    "percentage_distribution": {
+      "factual_query": 97.9746835443038,
+      "method_query": 1.0126582278481013,
+      "comparison_query": 0.8860759493670887,
+      "opinion_query": 0.12658227848101267
+    }
+  }
+]
