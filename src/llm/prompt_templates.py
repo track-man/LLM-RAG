@@ -336,7 +336,7 @@ class TemplateValidator:
         variables = re.findall(r'\{(\w+)\}', template)
         return list(set(variables))  # 去重
 
-
+"""
 # ==================== 使用示例 ====================
 def usage_example():
     """使用示例"""
@@ -388,3 +388,4 @@ if __name__ == "__main__":
     print(f"提取到的变量: {variables}")
 
     print(f"验证结果: {validator.validate_template(template, variables)}")
+"""
