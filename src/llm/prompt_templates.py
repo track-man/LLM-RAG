@@ -9,7 +9,7 @@
 """
 
 class PromptTemplates:
-    """增强版Prompt模板管理器"""
+    """Prompt模板管理器"""
     
     # ==================== 初始回答生成模板 ====================
     INITIAL_ANSWER_TEMPLATE = """
@@ -461,3 +461,4 @@ print("幻觉分析:", result['hallucination_analysis'])
 print("比较报告:", result['comparison_report'])
 
 """
+
