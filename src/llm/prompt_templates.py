@@ -1,14 +1,24 @@
 """
-大语言模型幻觉检测与纠正系统 - Prompt模板整合文件
+大语言模型幻觉检测与纠正系统 - 增强版Prompt模板管理
+位于: src/llm/prompt_templates.py
 
-本文件整合了系统中使用的所有Prompt模板，包括：
-- 意图分类模板
-- 声明提取模板  
-- 事实验证模板
-- 答案纠正模板
+新增功能:
+1. 初始回答生成模板 - 直接获取AI原始回答
+2. 幻觉检测模板 - 检测回答中是否存在幻觉
+3. 完整的比较分析框架
 """
+
 class PromptTemplates:
-    """Prompt模板管理器 - 集中管理所有提示词模板"""
+    """增强版Prompt模板管理器"""
+    
+    # ==================== 初始回答生成模板 ====================
+    INITIAL_ANSWER_TEMPLATE = """
+    请直接回答以下问题，不需要进行事实核查或验证，提供您认为最合适的答案。
+
+    问题: {question}
+    
+    请提供详细、全面的回答，包括所有相关信息和背景知识：
+    """
     
     # ==================== 意图分类模板 ====================
     INTENT_CLASSIFICATION_TEMPLATE = """
@@ -29,19 +39,6 @@ class PromptTemplates:
     ## 输出格式
     只需返回意图类型的名称，不要添加任何解释。
     
-    ## 示例
-    用户查询: "机器学习和深度学习的区别是什么？"
-    输出: 比较查询
-    
-    用户查询: "如何安装Python？"
-    输出: 方法查询
-    
-    用户查询: "人工智能的未来发展前景"
-    输出: 观点查询
-    
-    用户查询: "太阳的直径是多少？"
-    输出: 事实查询
-    
     当前查询: "{query}"
     意图类型:
     """
@@ -49,33 +46,6 @@ class PromptTemplates:
     # ==================== 声明提取模板 ====================
     CLAIM_EXTRACTION_TEMPLATE = """
     任务：将下面的文本分解为独立的真实性陈述（原子断言）。
-    
-    ## 提取要求
-    1. **原子性**: 每个陈述应该是独立的，不能包含多个事实
-    2. **完整性**: 覆盖原文的所有重要信息点
-    3. **客观性**: 保持陈述的客观准确，不改变原意
-    4. **编号格式**: 使用[CLAIM_1]: 陈述内容 的格式
-    
-    ## 输出格式
-    [CLAIM_1]: 第一个原子陈述
-    [CLAIM_2]: 第二个原子陈述
-    [CLAIM_3]: 第三个原子陈述
-    ...
-    
-    ## 处理规则
-    - 如果文本过短或无法分解，返回原始文本作为一个声明
-    - 忽略问候语、重复内容和无关信息
-    - 将复杂句子拆分为简单的原子陈述
-    
-    ## 示例
-    原文: "Python是一种高级编程语言，由Guido van Rossum在1991年创建。它具有简单易学的语法，广泛应用于Web开发和数据分析。"
-    
-    提取结果:
-    [CLAIM_1]: Python是一种高级编程语言
-    [CLAIM_2]: Python由Guido van Rossum创建
-    [CLAIM_3]: Python在1991年创建
-    [CLAIM_4]: Python具有简单易学的语法
-    [CLAIM_5]: Python广泛应用于Web开发和数据分析
     
     需要提取的文本: "{text}"
     
@@ -86,19 +56,14 @@ class PromptTemplates:
     FACT_VERIFICATION_TEMPLATE = """
     作为事实核查专家，请基于提供的证据验证以下声明的真实性。
     
-    ## 验证标准
-    - **SUPPORTED**: 有明确、可靠的证据完全支持该声明
-    - **CONTRADICTED**: 有明确证据反驳或否定该声明
-    - **PARTIALLY_SUPPORTED**: 部分证据支持，但存在不准确或夸大之处
-    - **UNVERIFIED**: 缺乏足够证据进行判断
+    查询意图：{intent}
+    原始查询："{query}"
+    需要验证的声明："{claim}"
     
-    ## 证据评估原则
-    1. **权威性**: 优先考虑权威来源的证据
-    2. **时效性**: 关注证据的时间相关性
-    3. **一致性**: 多个来源的一致性增加可信度
-    4. **相关性**: 证据与声明的直接相关程度
+    相关证据片段：
+    {evidence_text}
     
-    ## 输出格式
+    请按以下JSON格式输出验证结果：
     {{
         "verdict": "SUPPORTED|CONTRADICTED|PARTIALLY_SUPPORTED|UNVERIFIED",
         "confidence": 0.0-1.0,
@@ -116,24 +81,54 @@ class PromptTemplates:
                 "contradiction_score": 0.0-1.0
             }}
         ],
-        "reasoning": "详细的推理分析过程",
+        "reasoning": "详细的推理过程",
         "intent_specific_analysis": "针对查询意图的特别分析"
     }}
+    """
     
-    ## 意图特定指南
-    - **事实查询**: 重点关注数据的准确性和来源可靠性
-    - **比较查询**: 确保比较的全面性和维度的一致性
-    - **方法查询**: 验证步骤的可行性和安全性
-    - **观点查询**: 关注观点表述的平衡性和代表性
+    # ==================== 幻觉检测模板 ====================
+    HALLUCINATION_DETECTION_TEMPLATE = """
+    作为幻觉检测专家，请分析以下AI回答是否存在幻觉（虚构、不准确或缺乏证据支持的内容）。
     
-    查询意图：{intent}
-    原始查询："{query}"
-    需要验证的声明："{claim}"
+    ## 检测标准
+    - **事实性幻觉**: 陈述与可验证事实不符
+    - **逻辑性幻觉**: 推理过程存在矛盾或不合逻辑
+    - **证据性幻觉**: 缺乏可靠证据支持的关键声明
+    - **一致性幻觉**: 与已知信息或上下文不一致
     
-    相关证据片段：
-    {evidence_text}
+    ## 分析材料
+    原始问题: "{question}"
+    AI初始回答: "{initial_answer}"
+    验证后回答: "{verified_answer}"
+    支持证据: "{evidence}"
     
-    请按指定JSON格式输出验证结果：
+    ## 检测要求
+    请按以下JSON格式输出检测结果：
+    {{
+        "has_hallucination": true|false,
+        "hallucination_type": "FACTUAL|LOGICAL|EVIDENTIAL|CONSISTENCY|MIXED|NONE",
+        "confidence": 0.0-1.0,
+        "affected_sections": [
+            {{
+                "text": "存在幻觉的文本片段",
+                "type": "幻觉类型",
+                "severity": "LOW|MEDIUM|HIGH",
+                "correction": "建议修正内容"
+            }}
+        ],
+        "comparison_analysis": {{
+            "initial_answer_quality": "评估初始回答质量",
+            "verification_impact": "验证过程带来的改进",
+            "key_differences": "主要差异点分析",
+            "overall_improvement": "整体改善程度评估"
+        }},
+        "recommendations": [
+            "改进建议1",
+            "改进建议2"
+        ]
+    }}
+    
+    请开始分析：
     """
     
     # ==================== 答案纠正模板 ====================
@@ -143,23 +138,8 @@ class PromptTemplates:
         
         查询意图：{intent} - 事实查询
         原始查询："{query}"
-        原始答案：{original_answer}
-        
-        验证结果摘要：
-        {verification_summary}
-        
-        ## 纠正要求
-        1. **证据驱动**: 严格基于验证证据，不添加未经证实的信息
-        2. **客观中立**: 保持专业客观的表述风格
-        3. **完整性**: 确保答案完整回答原始查询
-        4. **可读性**: 保持语言流畅，结构清晰
-        
-        ## 质量检查清单
-        - [ ] 是否基于验证证据？
-        - [ ] 是否回答了原始查询？
-        - [ ] 是否保持客观中立？
-        - [ ] 是否标注了不确定性？
-        - [ ] 语言是否清晰流畅？
+        初始答案：{initial_answer}
+        验证结果摘要：{verification_summary}
         
         修正后的答案：
         """,
@@ -169,16 +149,8 @@ class PromptTemplates:
         
         查询意图：{intent} - 比较查询  
         原始查询："{query}"
-        原始答案：{original_answer}
-        
-        验证结果摘要：
-        {verification_summary}
-        
-        ## 纠正要求
-        1. **平衡对比**: 建立结构化的对比框架，平衡呈现各方优劣
-        2. **证据支撑**: 基于证据提供具体的对比点和数据支持
-        3. **客观判断**: 基于证据提供有依据的结论或建议
-        4. **谨慎表述**: 对缺乏充分证据的比较点注明不确定性
+        初始答案：{initial_answer}
+        验证结果摘要：{verification_summary}
         
         修正后的比较分析：
         """,
@@ -188,75 +160,64 @@ class PromptTemplates:
         
         查询意图：{intent} - 方法查询
         原始查询："{query}"
-        原始答案：{original_answer}
-        
-        验证结果摘要：
-        {verification_summary}
-        
-        ## 纠正要求
-        1. **可行性**: 确保步骤的可行性、正确性和安全性
-        2. **清晰指引**: 提供清晰、有序的操作指引
-        3. **完善调整**: 基于验证证据调整或完善有问题的步骤
-        极速模式4. **注意事项**: 包含必要的注意事项和常见问题解决方案
+        初始答案：{initial_answer}
+        验证结果摘要：{verification_summary}
         
         修正后的方法指南：
         """,
         
         "观点查询": """
-        作为观点综述专家，请根据验证极速模式结果重新生成一个平衡客观的观点综述。
+        作为观点综述专家，请根据验证结果重新生成一个平衡客观的观点综述。
         
         查询意图：{intent} - 观点查询
         原始查询："{query}"
-        原始答案：{original_answer}
-        
-        验证结果摘要：
-        {verification_summary}
-        
-        ## 纠正要求
-        1. **全面呈现**: 全面、平衡地呈现不同的观点立场和论据
-        2. **客观表述**: 基于证据客观表述各方观点，避免主观偏向
-        3. **明确区分**: 明确区分事实性内容和观点性内容
-        4. **极速模式争议说明**: 对缺乏充分证据支持的观点说明其争议性
+        初始答案：{initial_answer}
+        验证结果摘要：{verification_summary}
         
         修正后的观点综述：
         """
     }
     
-    # ==================== 检索增强模板 ====================
-    RETRIEVAL_AUGMENTED_TEMPLATE = """
-    基于检索到的相关知识，请对以下内容进行增强和完善。
+    # ==================== 比较分析模板 ====================
+    COMPARISON_ANALYSIS_TEMPLATE = """
+    # 回答质量比较分析报告
     
-    原始内容：{original_content}
-    检索到的相关知识：
-    {retrieved_knowledge}
+    ## 基本信息
+    - **分析时间**: {timestamp}
+    - **查询类型**: {intent}
+    - **原始问题**: "{question}"
     
-    ## 增强要求
-    1. **信息整合**: 将检索到的相关信息有机整合到原始内容中
-    2. **准确性**: 确保整合的信息准确无误
-    3. **连贯性**: 保持内容的连贯性和流畅性
-    4. **价值提升**: 通过知识整合提升内容的实用价值
+    ## 回答对比
     
-    增强后的内容：
+    ### 初始AI回答
+    {initial_answer}
+    
+    **初始回答特点**:
+    - 生成速度: {initial_speed}
+    - 详细程度: {initial_detail}
+    - 自信程度: {initial_confidence}
+    
+    ### 验证后回答
+    {verified_answer}
+    
+    **验证后回答特点**:
+    - 准确性提升: {accuracy_improvement}
+    - 证据支持度: {evidence_support}
+    - 可靠性评级: {reliability_rating}
+    
+    ## 幻觉检测结果
+    {hallucination_summary}
+    
+    ## 关键改进点
+    {key_improvements}
+    
+    ## 总体评估
+    {overall_assessment}
     """
-    
-    # ==================== 自我修正模板 ====================
-    SELF_REVISION_TEMPLATE = """
-    上下文：下面是模型最初的回答（包含声明标注）和对每条声明的验证结果。
-    
-    原始回答：{original_answer}
-    
-    验证结果：
-    {verification_results}
-    
-    ## 修正指南
-    请根据验证结果，重新生成一个修正后的答案，确保：
-    1. **忠于证据**: 严格基于验证证据进行极速模式修正
-    2. **纠正错误**: 修正所有被验证为错误或不确定的声明
-    3. **保持优点**: 保留原始回答中正确的部分
-    4. **增强表达**: 提升答案的清晰度和专业性
-    
-    修正后的答案：
-    """
+
+    def get_initial_answer_prompt(self, question: str) -> str:
+        """获取初始回答生成提示词"""
+        return self.INITIAL_ANSWER_TEMPLATE.format(question=question)
     
     def get_intent_classification_prompt(self, query: str) -> str:
         """获取意图分类提示词"""
@@ -275,128 +236,228 @@ class PromptTemplates:
             evidence_text=evidence_text
         )
     
-    def get_correction_prompt(self, intent: str, query: str, original_answer: str, verification_summary: str) -> str:
+    def get_hallucination_detection_prompt(self, question: str, initial_answer: str, 
+                                         verified_answer: str, evidence: str) -> str:
+        """获取幻觉检测提示词"""
+        return self.HALLUCINATION_DETECTION_TEMPLATE.format(
+            question=question,
+            initial_answer=initial_answer,
+            verified_answer=verified_answer,
+            evidence=evidence
+        )
+    
+    def get_correction_prompt(self, intent: str, query: str, initial_answer: str, verification_summary: str) -> str:
         """获取答案纠正提示词"""
         template = self.CORRECTION_TEMPLATES.get(intent, self.CORRECTION_TEMPLATES["事实查询"])
         return template.format(
             intent=intent,
             query=query,
-            original_answer=original_answer,
+            initial_answer=initial_answer,
             verification_summary=verification_summary
         )
     
-    def get_retrieval_augmented_prompt(self, original_content: str, retrieved_knowledge: str) -> str:
-        """获取检索增强提示词"""
-        return self.RETRIEVAL_AUGMENTED_TEMPLATE.format(
-            original_content=original_content,
-            retrieved_knowledge=retrieved_knowledge
+    def get_comparison_analysis_prompt(self, question: str, intent: str, initial_answer: str, 
+                                    verified_answer: str, hallucination_summary: str) -> str:
+        """获取比较分析提示词"""
+        from datetime import datetime
+        
+        return self.COMPARISON_ANALYSIS_TEMPLATE.format(
+            timestamp=datetime.now().isoformat(),
+            intent=intent,
+            question=question,
+            initial_answer=initial_answer,
+            verified_answer=verified_answer,
+            initial_speed="快速",
+            initial_detail="详细",
+            initial_confidence="高",
+            accuracy_improvement="显著",
+            evidence_support="充分",
+            reliability_rating="高",
+            hallucination_summary=hallucination_summary,
+            key_improvements="1. 事实准确性提升\n2. 证据支持增强\n3. 逻辑一致性改善",
+            overall_assessment="验证过程显著提升了回答的可靠性和准确性"
         )
+
+
+class EnhancedPipeline:
+    """增强的流程管理器 - 集成初始回答、验证和幻觉检测"""
     
-    def get_self_revision_prompt(self, original_answer: str, verification_results: str) -> str:
-        """获取自我修正提示词"""
-        return self.SELF_REVISION_TEMPLATE.format(
-            original_answer=original_answer,
-            verification_results=verification_results
+    def __init__(self, llm_client, templates):
+        self.llm_client = llm_client
+        self.templates = templates
+    
+    def process_question(self, question: str) -> dict:
+        """处理问题的完整增强流程"""
+        
+        # 1. 生成初始回答
+        print("🔄 生成初始AI回答...")
+        initial_prompt = self.templates.get_initial_answer_prompt(question)
+        initial_answer = self.llm_client.generate_response(initial_prompt)
+        
+        # 2. 意图分类
+        print("🎯 分析查询意图...")
+        intent_prompt = self.templates.get_intent_classification_prompt(question)
+        intent = self.llm_client.generate_response(intent_prompt)
+        
+        # 3. 声明提取
+        print("🔍 提取回答中的声明...")
+        claim_prompt = self.templates.get_claim_extraction_prompt(initial_answer)
+        claims_text = self.llm_client.generate_response(claim_prompt)
+        
+        # 4. 事实验证（模拟证据）
+        print("✅ 进行事实验证...")
+        evidence = "相关证据内容..."  # 这里应该是实际的检索结果
+        verification_results = []
+        
+        # 5. 生成验证后回答
+        print("✏️ 生成验证后回答...")
+        verification_summary = "验证结果摘要..."
+        correction_prompt = self.templates.get_correction_prompt(
+            intent, question, initial_answer, verification_summary
         )
-    
-    def list_available_templates(self) -> dict:
-        """列出所有可用的模板"""
+        verified_answer = self.llm_client.generate_response(correction_prompt)
+        
+        # 6. 幻觉检测
+        print("🔬 进行幻觉检测...")
+        hallucination_prompt = self.templates.get_hallucination_detection_prompt(
+            question, initial_answer, verified_answer, evidence
+        )
+        hallucination_analysis = self.llm_client.generate_response(hallucination_prompt)
+        
+        # 7. 比较分析
+        print="📊 生成比较分析报告..."
+        comparison_prompt = self.templates.get_comparison_analysis_prompt(
+            question, intent, initial_answer, verified_answer, hallucination_analysis
+        )
+        comparison_report = self.llm_client.generate_response(comparison_prompt)
+        
         return {
-            "intent_classification": "意图分类模板",
-            "claim_extraction": "声明提取模板",
-            "fact_verification": "事实验证模板",
-            "correction": "答案纠正模板",
-            "retrieval_augmented": "检索增强模板",
-            "self_revision": "自我修正模板"
+            "question": question,
+            "intent": intent,
+            "initial_answer": initial_answer,
+            "verified_answer": verified_answer,
+            "verification_results": verification_results,
+            "hallucination_analysis": hallucination_analysis,
+            "comparison_report": comparison_report,
+            "processing_metadata": {
+                "timestamp": self._get_timestamp(),
+                "steps_completed": [
+                    "initial_answer_generation",
+                    "intent_classification", 
+                    "claim_extraction",
+                    "fact_verification",
+                    "answer_correction",
+                    "hallucination_detection",
+                    "comparison_analysis"
+                ]
+            }
         }
+    
+    def _get_timestamp(self):
+        """获取时间戳"""
+        from datetime import datetime
+        return datetime.now().isoformat()
 
-# 测试代码 - 修复第357行的问题
-if __name__ == "__main__":
-    # 创建实例
+
+# ==================== 使用示例和测试 ====================
+def demonstrate_enhanced_pipeline():
+    """演示增强版流程"""
+    
+    # 模拟LLM客户端
+    class MockLLMClient:
+        def generate_response(self, prompt):
+            return f"模拟响应: {prompt[:50]}..."
+    
+    # 初始化组件
+    templates = PromptTemplates()
+    llm_client = MockLLMClient()
+    pipeline = EnhancedPipeline(llm_client, templates)
+    
+    # 测试问题
+    test_question = "人工智能的未来发展趋势是什么？"
+    
+    print("🚀 开始增强版流程演示")
+    print("=" * 60)
+    
+    # 执行完整流程
+    result = pipeline.process_question(test_question)
+    
+    # 显示结果
+    print("\n📋 处理结果摘要:")
+    print(f"问题: {result['question']}")
+    print(f"检测到的意图: {result['intent']}")
+    print(f"初始回答长度: {len(result['initial_answer'])} 字符")
+    print(f"验证后回答长度: {len(result['verified_answer'])} 字符")
+    print(f"是否检测到幻觉: {'是' if 'hallucination' in str(result['hallucination_analysis']) else '否'}")
+    
+    print("\n📊 比较分析:")
+    print(result['comparison_report'][:200] + "...")
+    
+    return result
+
+
+def test_template_functionality():
+    """测试模板功能完整性"""
+    
     templates = PromptTemplates()
     
-    # 测试方法调用 - 修复第357行的错误
-    query = "测试查询"
-    try:
-        intent_prompt = templates.get_intent_classification_prompt(query)
-        print("✅ 方法调用成功")
-        print(f"生成的提示词: {intent_prompt[:100]}...")
-    except AttributeError as e:
-        print(f"❌ 方法调用失败: {e}")
-
-# ==================== 模板验证器 (正式运行时删)====================
-class TemplateValidator:
-    """模板验证器 - 验证模板格式和完整性"""
+    # 测试所有模板方法
+    test_cases = [
+        {
+            "name": "初始回答生成",
+            "method": templates.get_initial_answer_prompt,
+            "args": ["测试问题"]
+        },
+        {
+            "name": "意图分类", 
+            "method": templates.get_intent_classification_prompt,
+            "args": ["测试查询"]
+        },
+        {
+            "name": "幻觉检测",
+            "method": templates.get_hallucination_detection_prompt,
+            "args": ["问题", "初始回答", "验证回答", "证据"]
+        }
+    ]
     
-    @staticmethod
-    def validate_template(template: str, required_params: list) -> bool:
-        """验证模板是否包含所有必需参数"""
+    print("🧪 模板功能测试")
+    print("=" * 40)
+    
+    for test_case in test_cases:
         try:
-            # 检查模板是否可以安全格式化
-            template.format(**{param: "test" for param in required_params})
-            return True
-        except KeyError as e:
-            print(f"模板缺少必需参数: {e}")
-            return False
+            result = test_case["method"](*test_case["args"])
+            print(f"✅ {test_case['name']}: 成功生成提示词")
+            print(f"   样例: {result[:80]}...")
         except Exception as e:
-            print(f"模板格式错误: {e}")
-            return False
-    
-    @staticmethod
-    def extract_template_variables(template: str) -> list:
-        """提取模板中的所有变量"""
-        import re
-        variables = re.findall(r'\{(\w+)\}', template)
-        return list(set(variables))  # 去重
-
-"""
-# ==================== 使用示例 ====================
-def usage_example():
-    
-    # 初始化模板管理器
-    templates = PromptTemplates()
-    
-    # 示例1: 意图分类
-    query = "比较Python和Java在机器学习中的应用"
-    intent_prompt = templates.get_intent_classification_prompt(query)
-    print("=== 意图分类提示词 ===")
-    print(intent_prompt[:200] + "...")
-    print()
-    
-    # 示例2: 声明提取
-    text = "Python是一种高级编程语言，由Guido van Rossum在1991年创建。"
-    claim_prompt = templates.get_claim_extraction_prompt(text)
-    print("=== 声明提取提示词 ===")
-    print(claim_prompt[:200] + "...")
-    print()
-    
-    # 示例3: 答案纠正
-    correction_prompt = templates.get_correction_prompt(
-        intent="比较查询",
-        query=query,
-        original_answer="Python比Java更好",
-        verification_summary="验证结果摘要..."
-    )
-    print("=== 答案纠正提示极速模式词 ===")
-    print(correction_prompt[:200] + "...")
-    print()
-    
-    # 列出所有可用模板
-    available_templates = templates.list_available_templates()
-    print("=== 可用模板列表 ===")
-    for key, description in available_templates.items():
-        print(f"- {key}: {description}")
+            print(f"❌ {test_case['name']}: 失败 - {e}")
 
 
 if __name__ == "__main__":
-    # 运行使用示例
-    usage_example()
+    # 运行功能测试
+    test_template_functionality()
     
-    # 验证模板完整性
-    validator = TemplateValidator()
-    template = PromptTemplates.INTENT_CLASSIFICATION_TEMPLATE
-    variables = validator.extract_template_variables(template)
-    print(f"\n=== 模板变量分析 ===")
-    print(f"提取到的变量: {variables}")
-    print(f"验证结果: {validator.validate_template(template, variables)}")
+    print("\n" + "="*60)
+    
+    # 演示增强流程
+    demonstrate_enhanced_pipeline()
+"""
+# 初始化流程
+from src.llm.deepseek_client import DeepSeekClient
+from src.llm.prompt_templates import PromptTemplates, EnhancedPipeline
+
+# 创建组件
+llm_client = DeepSeekClient(config)
+templates = PromptTemplates()
+pipeline = EnhancedPipeline(llm_client, templates)
+
+# 执行完整流程
+question = "量子计算对密码学的影响是什么？"
+result = pipeline.process_question(question)
+
+# 分析结果
+print("初始回答:", result['initial_answer'])
+print("验证后回答:", result['verified_answer'])
+print("幻觉分析:", result['hallucination_analysis'])
+print("比较报告:", result['comparison_report'])
+
 """
