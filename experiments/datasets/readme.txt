@@ -1,4 +1,34 @@
- 各文件详细说明
+ 各文件详细说明：
+
+处理之后的数据集字段：
+
+TruthfulQA数据集字段：
+{
+  "question": "问题文本",
+  "ground_truth": "标准答案", 
+  "context": "",
+  "category": "具体类别（misconceptions/health/law等）",
+  "source": "truthfulqa",
+  "dataset_source": "TruthfulQA.csv",
+  "question_length": 47,
+  "answer_length": 52,
+}
+
+FaithDial Gold数据集字段：
+{
+  "question": "对话历史",
+  "ground_truth": "忠实回复", 
+  "context": "知识背景",
+  "category": "hallucination/entailment/general",
+  "source": "faithdial_gold", 
+  "dataset_source": "cmu/topical/wow",
+  "begin_labels": "原始BEGIN标注",
+  "vrm_labels": "原始VRM标注",
+  "question_length": 40,
+  "answer_length": 84,
+  "context_length": 918
+}
+
 1. 原始数据文件 (raw/)
 TruthfulQA.csv
 作用: TruthfulQA基准测试集的原始数据
