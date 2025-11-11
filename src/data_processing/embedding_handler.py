@@ -129,7 +129,7 @@ class EmbeddingHandler:
         
         try:
             # 创建Chroma客户端
-            client = self.create_chroma_client(chroma_path)
+            client = self.create_chroma_client(Path(chroma_path))
             
             # 获取或创建集合
             collection = client.get_or_create_collection(
@@ -137,25 +137,29 @@ class EmbeddingHandler:
                 metadata={"description": "RAG系统文档分块集合"}
             )
             
-            # 准备数据
-            ids = []
-            documents = []
-            metadatas = []
-            embeddings_array = np.array(embeddings, dtype=np.float32)
+            # 分批处理，每批最大 5000 个文档
+            batch_size = 5000
+            total_chunks = len(chunks)
             
-            for i, chunk in enumerate(chunks):
-                chunk_id = f"chunk_{i}"
-                ids.append(chunk_id)
-                documents.append(chunk["text"])
-                metadatas.append(chunk["metadata"])
-            
-            # 批量添加到集合
-            collection.add(
-                ids=ids,
-                documents=documents,
-                embeddings=embeddings_array,
-                metadatas=metadatas
-            )
+            for i in range(0, total_chunks, batch_size):
+                end_idx = min(i + batch_size, total_chunks)
+                batch_chunks = chunks[i:end_idx]
+                batch_embeddings = embeddings[i:end_idx]
+                
+                print(f"处理批次 {i//batch_size + 1}/{(total_chunks-1)//batch_size + 1}, 文档数: {len(batch_chunks)}")
+                
+                # 准备数据
+                ids = [f"doc_{j}" for j in range(i, end_idx)]
+                documents = [chunk.get("text") for chunk in batch_chunks]
+                metadatas = [chunk.get("metadata") for chunk in batch_chunks]
+                
+                # 添加到集合
+                collection.add(
+                    ids=ids,
+                    embeddings=batch_embeddings,
+                    documents=documents,
+                    metadatas=metadatas
+                )
             
             logger.info(f"成功索引 {len(chunks)} 个文档分块")
             logger.info(f"集合 '{collection_name}' 当前包含 {collection.count()} 个文档")
@@ -180,7 +184,7 @@ class EmbeddingHandler:
             Chroma集合实例
         """
         try:
-            client = self.create_chroma_client(chroma_path)
+            client = self.create_chroma_client(Path(chroma_path))
             collection = client.get_collection(name=collection_name)
             logger.info(f"成功加载集合 '{collection_name}'，包含 {collection.count()} 个文档")
             return collection
@@ -242,7 +246,7 @@ def generate_embeddings(texts: List[str]) -> List[List[float]]:
 def index_documents(
     chunks: List[Dict[str, Any]], 
     embeddings: List[List[float]], 
-    chroma_path: str
+    chroma_path: Path
 ) -> None:
     """
     将文档分块与嵌入向量存储到Chroma向量数据库的便捷函数
@@ -253,7 +257,7 @@ def index_documents(
         chroma_path: Chroma数据库存储路径
     """
     handler = get_embedding_handler()
-    handler.index_documents(chunks, embeddings, chroma_path)
+    handler.index_documents(chunks, embeddings, str(chroma_path))
 
 def load_existing_collection(chroma_path: str, collection_name: str = "documents") -> chromadb.Collection:
     """
@@ -305,7 +309,7 @@ if __name__ == "__main__":
         
         # 测试集合信息获取
         print("\n正在测试集合信息获取...")
-        info = get_collection_info(config.CHROMA_PATH)
+        info = get_collection_info(str(config.CHROMA_DB_PATH))
         print(f"集合信息: {info}")
         
     except Exception as e:
