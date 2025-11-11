@@ -4,13 +4,13 @@
 """
 from typing import List, Dict, Tuple, Optional
 import logging
-from src.retrieval.chroma_retriever import retrieve_relevant_chunks
-from src.llm.prompt_templates import (
+from src.retrieval.chroma_retriever import ChromaRetriever  
+from src.llm.llm.prompt_templates import (
     get_initial_prompt,
     get_verification_prompt,
     get_correction_prompt
 )
-from src.llm.deepseek_client import llm_inference
+from src.llm.llm.deepseek_client import llm_inference
 from src.verification.fact_checker import verify_answer
 from src.correction.answer_corrector import correct_answer
 import config
@@ -66,10 +66,15 @@ def rag_with_fact_checking(
         #   chroma_path: Chroma向量库路径
         # 输出规范：
         #   列表，每个元素为{"text": 块内容, "metadata": 元数据, "distance": 距离}
-        retrieved_chunks: List[Dict[str, any]] = retrieve_relevant_chunks(
+        # 实例化Chroma检索器
+        retriever = ChromaRetriever(
+            db_path=chroma_path,  # 指定向量库路径
+            collection_name="documents"  # 集合名称（与初始化时一致）
+        )
+        # 调用检索方法
+        retrieved_chunks: List[Dict[str, any]] = retriever.retrieve_similar_chunks(
             query=query,
-            top_k=config.TOP_K,
-            chroma_path=chroma_path
+            top_k=config.TOP_K
         )
         result["retrieved_chunks"] = retrieved_chunks
         process_log.append(f"检索完成，返回{len(retrieved_chunks)}个相关文档块")

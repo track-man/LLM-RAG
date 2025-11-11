@@ -412,5 +412,5 @@ correction_prompt = templates.get_correction_prompt(
     original_answer="需要验证的答案",
     verification_summary="验证结果摘要"
 )
-
+"""
 
