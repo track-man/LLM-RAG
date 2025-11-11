@@ -4,6 +4,7 @@
 """
 import os
 import logging
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 import chromadb
 from chromadb.config import Settings
@@ -75,7 +76,7 @@ class EmbeddingHandler:
             logger.error(f"生成嵌入向量时发生错误: {str(e)}")
             raise
 
-    def create_chroma_client(self, chroma_path: str) -> ClientAPI:
+    def create_chroma_client(self, chroma_path: Path) -> ClientAPI:
         """
         创建Chroma客户端
         
@@ -86,18 +87,19 @@ class EmbeddingHandler:
             Chroma客户端实例
         """
         # 确保路径存在
-        os.makedirs(chroma_path, exist_ok=True)
+        path_str = str(chroma_path)
+        os.makedirs(path_str, exist_ok=True)
         
         # 创建Chroma客户端
         client = chromadb.PersistentClient(
-            path=chroma_path,
+            path=path_str,
             settings=Settings(
                 anonymized_telemetry=False,  # 关闭匿名遥测
                 allow_reset=True,  # 允许重置数据库
             )
         )
         
-        logger.info(f"Chroma客户端创建完成，数据库路径: {chroma_path}")
+        logger.info(f"Chroma客户端创建完成，数据库路径: {path_str}")
         return client
 
     def index_documents(
