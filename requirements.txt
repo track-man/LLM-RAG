@@ -3,9 +3,11 @@ chromadb==0.4.24
 
 # 嵌入模型
 sentence-transformers==2.2.2
+torch>=1.9.0
 
 # LLM调用
 requests==2.31.0
+openai>=1.0.0
 
 # 数据处理
 langchain==0.1.16
@@ -19,5 +21,7 @@ pandas==2.2.1
 matplotlib==3.8.3
 python-dotenv==1.0.1
 
-# 日志与其他
-logging==0.4.9.6
+
+# 配置管理
+python-dotenv>=1.0.1
+
