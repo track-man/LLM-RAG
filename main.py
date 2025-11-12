@@ -100,13 +100,13 @@ def interactive_query() -> None:
         # 输入规范：
         #   query: 用户查询字符串
         #   CHROMA_DB_PATH: Chroma向量库路径（从config读取）
-        #   max_correction_rounds: 最大纠正轮次（从config读取）
+        #   max_verification_attempts: 最大纠正轮次（从config读取）
         # 输出规范：
         #   包含全流程信息的字典（同rag_with_fact_checking输出）
         result = rag_with_fact_checking(
             query=query,
             chroma_path=config.CHROMA_DB_PATH,
-            max_correction_rounds=config.MAX_CORRECTION_ROUNDS
+            max_correction_rounds=config.FACT_CHECK_CONFIG["max_verification_attempts"]
         )
 
         # 打印最终结果

@@ -74,7 +74,7 @@ def rag_with_fact_checking(
         # 调用检索方法
         retrieved_chunks: List[Dict[str, any]] = retriever.retrieve_similar_chunks(
             query=query,
-            top_k=config.TOP_K
+            top_k=config.VECTOR_DB_CONFIG["top_k"]
         )
         result["retrieved_chunks"] = retrieved_chunks
         process_log.append(f"检索完成，返回{len(retrieved_chunks)}个相关文档块")
