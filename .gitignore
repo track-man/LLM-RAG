@@ -5,3 +5,4 @@ data/chroma_db/          # 向量库生成的临时数据（可重新构建）
 experiments/datasets/interim/  # 数据处理中间文件
 results/logs/            # 运行日志（动态生成）
 data/chroma_db/chroma.sqlite3
+src/retrieval/__pycache__/chroma_retriever.cpython-313.pyc
