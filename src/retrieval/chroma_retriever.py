@@ -21,7 +21,8 @@ class ChromaRetriever:
     def __init__(self, 
                  db_path: str = "data/chroma_db",
                  collection_name: str = "documents",
-                 embedding_model: str = "BAAI/bge-base-en-v1.5"):
+                 embedding_model: str = "BAAI/bge-base-en-v1.5",
+                 reset_collection: bool = False):  # 新增参数  11/12修改增加
         """
         初始化检索器
         
@@ -29,10 +30,12 @@ class ChromaRetriever:
             db_path: ChromaDB数据库路径
             collection_name: 集合名称
             embedding_model: 嵌入模型名称
+            reset_collection: 是否重置集合
         """
         self.db_path = Path(db_path)
         self.collection_name = collection_name
         self.model_name = embedding_model
+        self.reset_collection = reset_collection  # 新增参数  11/12修改增加
         
         # 检索参数
         self.default_top_k = 5
@@ -57,34 +60,43 @@ class ChromaRetriever:
             self.client = chromadb.PersistentClient(path=str(self.db_path))
             logger.info(f"ChromaDB客户端初始化: {self.db_path}")
             
+
             # 初始化嵌入模型
             logger.info(f"加载嵌入模型: {self.model_name}")
             self.embedder = SentenceTransformer(self.model_name)
-            logger.info("嵌入模型加载成功")
-            
-            # 获取或创建集合（使用自定义嵌入函数）
-            self.collection = None  # 确保初始化为None
 
-            try:
-                logger.info(f"尝试获取现有集合: {self.collection_name}")
-                self.collection = self.client.get_collection(
+            # 验证模型维度
+            test_embedding = self.embedder.encode(["test"])
+            logger.info(f"嵌入维度: {len(test_embedding[0])}")
+            logger.info("嵌入模型加载成功")
+
+            # 处理集合创建/重置逻辑
+            if self.reset_collection:
+                try:
+                    self.client.delete_collection(self.collection_name)
+                    logger.info(f"已删除现有集合: {self.collection_name}")
+                except Exception as e:
+                    logger.info(f"删除集合时忽略错误（可能集合不存在）: {e}")
+
+                # 创建新集合    
+                self.collection = self.client.create_collection(
                     name=self.collection_name,
-                    
+                    embedding_function=self._get_embedding_function(),
+                    metadata={"description": "Document chunks for RAG system"}
                 )
-                logger.info(f"使用现有集合: {self.collection_name}")
-            except Exception as e:
-                if "does not exist" in str(e) or "NotFound" in str(e):
-                    logger.info(f"集合不存在，创建新集合: {self.collection_name}")
-                    # 创建新集合    
+                logger.info(f"✅ 创建新集合成功: {self.collection_name}")
+            else:
+                try:
+                    self.collection = self.client.get_collection(name=self.collection_name)
+                    logger.info(f"使用现有集合: {self.collection_name}")
+                except Exception:
+                    # 集合不存在，创建新集合
                     self.collection = self.client.create_collection(
                         name=self.collection_name,
                         embedding_function=self._get_embedding_function(),
                         metadata={"description": "Document chunks for RAG system"}
-                    )
-                    logger.info(f"✅ 创建新集合成功: {self.collection_name}")
-                else:
-                    logger.error(f"获取集合时发生未知错误: {e}")
-                    raise
+                )
+                logger.info(f"创建新集合: {self.collection_name}")
 
                  # 验证集合是否成功设置
             if self.collection is None:
@@ -99,17 +111,27 @@ class ChromaRetriever:
             raise
     
     def _get_embedding_function(self):
-        """获取自定义嵌入函数"""
-        def custom_embedding_function(texts: List[str]) -> List[List[float]]:
-            """自定义嵌入函数，使用bge-base-en-v1.5模型"""
-            if not texts:
-                return []
+    # """获取自定义嵌入函数"""
+    # 定义符合ChromaDB新接口要求的嵌入函数类
+        class CustomEmbeddingFunction:
+            def __init__(self, embedder):
+                self.embedder = embedder
+            
+            def __call__(self, input):
+            # """ChromaDB要求的嵌入函数签名"""
+                if isinstance(input, str):
+                    texts = [input]
+                else:
+                    texts = input
+
+                if not texts:
+                    return []
             
             # 使用bge模型生成嵌入
-            embeddings = self.embedder.encode(texts)
-            return embeddings.tolist()
-        
-        return custom_embedding_function
+                embeddings = self.embedder.encode(texts)
+                return embeddings.tolist()
+    
+        return CustomEmbeddingFunction(self.embedder)
     
     def is_ready(self) -> bool:
         """检查检索器是否就绪"""
@@ -285,8 +307,13 @@ if __name__ == "__main__":
     print("🧪 测试使用bge-base-en-v1.5的ChromaRetriever...")
     
     try:
+        # 创建检索器实例并重置集合  11/12修改增加重置参数
+        retriever = ChromaRetriever(
+            db_path="test_chroma_db",
+        reset_collection=True  # 重置现有集合
+)
         # 创建检索器实例
-        retriever = ChromaRetriever(db_path="test_chroma_db")
+        # 11/12修改删除  retriever = ChromaRetriever(db_path="test_chroma_db")
         
         # 检查是否就绪
         print(f"检索器就绪状态: {retriever.is_ready()}")
