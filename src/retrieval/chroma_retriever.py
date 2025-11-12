@@ -310,7 +310,8 @@ if __name__ == "__main__":
         # 创建检索器实例并重置集合  11/12修改增加重置参数
         retriever = ChromaRetriever(
             db_path="test_chroma_db",
-        reset_collection=True  # 重置现有集合
+        embedding_model="BAAI/bge-base-en-v1.5",  
+        reset_collection=True    # 重置现有集合
 )
         # 创建检索器实例
         # 11/12修改删除  retriever = ChromaRetriever(db_path="test_chroma_db")
