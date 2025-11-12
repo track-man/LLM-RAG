@@ -89,41 +89,42 @@ class FactChecker:
 
     def verify_answer(self,
                      answer: str,
-                     retrieved_chunks: List[Dict],
-                     query: str = None) -> VerificationResult:
+                     chunks: List[Dict],
+                     query: str = None) -> Tuple[bool, List[str]]:
         """
         验证回答与文档的一致性
 
         Args:
             answer: LLM生成的回答
-            retrieved_chunks: 检索到的相关文档块
+            chunks: 检索到的相关文档块
             query: 原始查询（可选）
 
         Returns:
-            VerificationResult: 验证结果
+            Tuple[bool, List[str]]: (是否有幻觉, 错误描述列表)
         """
-        self.logger.info(f"开始验证回答，检索文档块数量: {len(retrieved_chunks)}")
+        self.logger.info(f"开始验证回答，检索文档块数量: {len(chunks)}")
 
         # 提取关键信息
         key_info = self._extract_key_information(answer)
 
         # 基础验证
-        basic_result = self._basic_verification(answer, key_info, retrieved_chunks)
+        basic_result = self._basic_verification(answer, key_info, chunks)
 
         # 语义验证（如果需要）
         semantic_result = None
         if self.verification_level in [VerificationLevel.SEMANTIC, VerificationLevel.COMPREHENSIVE]:
-            semantic_result = self._semantic_verification(answer, key_info, retrieved_chunks, query)
+            semantic_result = self._semantic_verification(answer, key_info, chunks, query)
 
         # 综合验证结果
         final_result = self._combine_verification_results(
-            basic_result, semantic_result, retrieved_chunks
+            basic_result, semantic_result, chunks
         )
 
         self.logger.info(f"验证完成，幻觉检测: {final_result.has_hallucination}, "
                         f"置信度: {final_result.confidence_score:.3f}")
 
-        return final_result
+        # 转换为规范输出格式
+        return final_result.has_hallucination, final_result.error_descriptions
 
     def _extract_key_information(self, text: str) -> Dict[str, List[str]]:
         """提取文本中的关键信息"""
@@ -166,7 +167,7 @@ class FactChecker:
     def _basic_verification(self,
                           answer: str,
                           key_info: Dict[str, List[str]],
-                          retrieved_chunks: List[Dict]) -> Dict[str, Any]:
+                          chunks: List[Dict]) -> Dict[str, Any]:
         """基础验证：规则基础的验证"""
         verification_details = {
             'level': 'basic',
@@ -176,19 +177,19 @@ class FactChecker:
         }
 
         # 检查1：数字一致性验证
-        number_issues = self._verify_numbers(key_info['numbers'], retrieved_chunks)
+        number_issues = self._verify_numbers(key_info['numbers'], chunks)
         if number_issues:
             verification_details['issues_found'].extend(number_issues)
         verification_details['checks_performed'].append('number_consistency')
 
         # 检查2：实体存在性验证
-        entity_issues = self._verify_entities(key_info['entities'], retrieved_chunks)
+        entity_issues = self._verify_entities(key_info['entities'], chunks)
         if entity_issues:
             verification_details['issues_found'].extend(entity_issues)
         verification_details['checks_performed'].append('entity_existence')
 
         # 检查3：声明支持性验证
-        claim_issues = self._verify_claims(key_info['claims'], retrieved_chunks)
+        claim_issues = self._verify_claims(key_info['claims'], chunks)
         if claim_issues:
             verification_details['issues_found'].extend(claim_issues)
         verification_details['checks_performed'].append('claim_support')
@@ -202,13 +203,13 @@ class FactChecker:
 
         return verification_details
 
-    def _verify_numbers(self, numbers: List[str], retrieved_chunks: List[Dict]) -> List[str]:
+    def _verify_numbers(self, numbers: List[str], chunks: List[Dict]) -> List[str]:
         """验证数字的一致性"""
         issues = []
 
         for number in numbers:
             found_in_chunks = 0
-            for chunk in retrieved_chunks:
+            for chunk in chunks:
                 if number in chunk['text']:
                     found_in_chunks += 1
 
@@ -218,7 +219,7 @@ class FactChecker:
 
         return issues
 
-    def _verify_entities(self, entities: List[str], retrieved_chunks: List[Dict]) -> List[str]:
+    def _verify_entities(self, entities: List[str], chunks: List[Dict]) -> List[str]:
         """验证实体的存在性"""
         issues = []
 
@@ -227,7 +228,7 @@ class FactChecker:
                 continue
 
             found_in_chunks = 0
-            for chunk in retrieved_chunks:
+            for chunk in chunks:
                 if entity.lower() in chunk['text'].lower():
                     found_in_chunks += 1
 
@@ -237,7 +238,7 @@ class FactChecker:
 
         return issues
 
-    def _verify_claims(self, claims: List[str], retrieved_chunks: List[Dict]) -> List[str]:
+    def _verify_claims(self, claims: List[str], chunks: List[Dict]) -> List[str]:
         """验证声明的支持性"""
         issues = []
 
@@ -254,7 +255,7 @@ class FactChecker:
                 if len(word) < 2:  # 过滤过短的词
                     continue
 
-                for chunk in retrieved_chunks:
+                for chunk in chunks:
                     if word.lower() in chunk['text'].lower():
                         support_score += 1
                         break
@@ -269,7 +270,7 @@ class FactChecker:
     def _semantic_verification(self,
                              answer: str,
                              key_info: Dict[str, List[str]],
-                             retrieved_chunks: List[Dict],
+                             chunks: List[Dict],
                              query: str = None) -> Dict[str, Any]:
         """语义验证：基于LLM的语义一致性检查"""
         verification_details = {
@@ -282,7 +283,7 @@ class FactChecker:
         try:
             # 构建语义验证prompt
             verification_prompt = self._build_semantic_verification_prompt(
-                answer, retrieved_chunks, query
+                answer, chunks, query
             )
 
             # 调用Deepseek v3 API进行语义验证
@@ -304,7 +305,7 @@ class FactChecker:
 
     def _build_semantic_verification_prompt(self,
                                           answer: str,
-                                          retrieved_chunks: List[Dict],
+                                          chunks: List[Dict],
                                           query: str = None) -> str:
         """构建语义验证prompt"""
         prompt = f"""作为一个事实检查专家，请验证以下回答与提供的参考文档的一致性。
@@ -317,7 +318,7 @@ LLM回答:
 参考文档:
 """
 
-        for i, chunk in enumerate(retrieved_chunks):
+        for i, chunk in enumerate(chunks):
             prompt += f"\n文档片段 {i+1}:\n{chunk['text']}\n"
 
         prompt += """
@@ -339,7 +340,7 @@ LLM回答:
         """调用Deepseek v3 API进行语义验证"""
         try:
             # 获取API配置
-            api_config = getattr(config, 'DEEPSEEK_API_CONFIG', {})
+            api_config = getattr(config, 'LLM_CONFIG', {})
 
             if not api_config.get('api_key'):
                 self.logger.error("Deepseek API密钥未配置")
@@ -444,7 +445,7 @@ LLM回答:
     def _combine_verification_results(self,
                                     basic_result: Dict[str, Any],
                                     semantic_result: Dict[str, Any],
-                                    retrieved_chunks: List[Dict]) -> VerificationResult:
+                                    chunks: List[Dict]) -> VerificationResult:
         """综合验证结果"""
 
         # 计算综合置信度
@@ -465,14 +466,19 @@ LLM回答:
             all_issues.extend(semantic_result.get('semantic_issues', []))
 
         # 判断是否存在幻觉
+        try:
+            threshold = config.FACT_CHECK_CONFIG['hallucination_threshold']
+        except:
+            threshold = 0.7  # 默认值
+
         has_hallucination = (
-            len(all_issues) > 0 or
-            final_confidence < config.HALLUCINATION_THRESHOLD
+                len(all_issues) > 0 or
+                final_confidence < threshold
         )
 
         # 收集支持证据
         evidence_chunks = []
-        for chunk in retrieved_chunks:
+        for chunk in chunks:
             evidence_chunks.append({
                 'text': chunk['text'][:200] + '...' if len(chunk['text']) > 200 else chunk['text'],
                 'metadata': chunk.get('metadata', {}),
@@ -492,20 +498,20 @@ LLM回答:
         )
 
 def verify_answer(answer: str,
-                 retrieved_chunks: List[Dict],
+                 chunks: List[Dict],
                  query: str = None,
-                 verification_level: str = "comprehensive") -> VerificationResult:
+                 verification_level: str = "comprehensive") -> Tuple[bool, List[str]]:
     """
     验证回答的便捷函数
 
     Args:
         answer: LLM生成的回答
-        retrieved_chunks: 检索到的相关文档块
+        chunks: 检索到的相关文档块
         query: 原始查询
         verification_level: 验证级别 ("basic", "semantic", "comprehensive")
 
     Returns:
-        VerificationResult: 验证结果
+        Tuple[bool, List[str]]: (是否有幻觉, 错误描述列表)
     """
     level_map = {
         "basic": VerificationLevel.BASIC,
@@ -516,4 +522,4 @@ def verify_answer(answer: str,
     level = level_map.get(verification_level, VerificationLevel.COMPREHENSIVE)
     checker = FactChecker(verification_level=level)
 
-    return checker.verify_answer(answer, retrieved_chunks, query)
+    return checker.verify_answer(answer, chunks, query)
