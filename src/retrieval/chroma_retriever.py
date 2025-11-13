@@ -130,6 +130,56 @@ class ChromaRetriever:
             # 使用bge模型生成嵌入
                 embeddings = self.embedder.encode(texts)
                 return embeddings.tolist()
+            # 需要添加的方法 👇
+            def embed_query(self, query=None, **kwargs):
+                """添加单个查询文本的嵌入方法"""
+                # 处理不同的参数传递方式
+                if query is None:
+                # 检查kwargs中的常见参数名
+                    query = kwargs.get('input', kwargs.get('texts', ''))
+                # 如果是从texts传入的列表，取第一个元素
+                    if isinstance(query, list) and len(query) > 0:
+                        query = query[0]
+            
+            # 确保query是字符串类型
+                if not isinstance(query, str) or not query.strip():
+                    return []
+                
+            # 使用bge模型生成单个查询的嵌入
+                embedding = self.embedder.encode([query.strip()])
+                if isinstance(embedding, np.ndarray):
+                    return embedding.tolist()
+                else:
+                    return [embedding.tolist()] if hasattr(embedding, 'tolist') else [list(embedding)]
+            
+            def embed_documents(self, texts=None, **kwargs):
+                """添加批量文档嵌入方法，支持额外关键字参数"""
+                # 处理不同的参数传递方式
+                if texts is None:
+                    texts = kwargs.get('input', kwargs.get('texts', []))
+            
+            # 确保texts是列表类型
+                if isinstance(texts, str):
+                    texts = [texts]
+                elif not isinstance(texts, list):
+                    texts = list(texts) if texts else []
+            
+                if not texts:
+                    return []
+                
+            # 过滤空字符串并去除空白
+                valid_texts = [text.strip() for text in texts if isinstance(text, str) and text.strip()]
+                if not valid_texts:
+                    return []
+            
+            # 使用bge模型生成批量嵌入
+                embeddings = self.embedder.encode(valid_texts)
+            # 确保返回的是二维列表格式
+                if isinstance(embeddings, np.ndarray):
+                    return embeddings.tolist()
+                else:
+                    return embeddings.tolist() if hasattr(embeddings, 'tolist') else list(embeddings)
+    
     
         return CustomEmbeddingFunction(self.embedder)
     
