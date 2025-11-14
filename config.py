@@ -9,7 +9,7 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
 # 数据存储路径
-RAW_DOCS_PATH = PROJECT_ROOT / "data" #/ "raw_docs"
+RAW_DOCS_PATH = PROJECT_ROOT / "data"/"old_data" #/ "raw_docs"
 PROCESSED_DOCS_PATH = PROJECT_ROOT / "data" / "processed_docs"
 CHROMA_DB_PATH = PROJECT_ROOT / "data" / "chroma_db"
 DATASETS_PATH = PROJECT_ROOT / "experiments" / "datasets"
@@ -40,7 +40,7 @@ LLM_CONFIG = {
 
 # 嵌入模型配置
 EMBEDDING_CONFIG = {
-    "model_name": "BAAI/bge-base-en",
+    "model_name": "BAAI/bge-base-en-v1.5",
     "embedding_dim": 768,
     "device": "auto",
     "normalize_embeddings": True,

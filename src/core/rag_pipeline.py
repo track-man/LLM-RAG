@@ -82,8 +82,15 @@ def rag_with_fact_checking(
         # 检索失败处理
         if not retrieved_chunks:
             process_log.append("未检索到任何相关文档，无法生成回答")
-            result["final_answer"] = "抱歉，未找到相关信息，无法回答您的问题。"
+            general_prompt = f"请回答以下问题：{query}"
+            general_answer = llm_inference(
+                prompt=general_prompt,
+                temperature=0.1
+            )
+    
+            result["final_answer"] = general_answer
             result["process_log"] = process_log
+            process_log.append("基于通用知识生成回答完成")
             return result
 
         # ====================== 步骤2：生成初步回答 ======================

@@ -111,77 +111,17 @@ class ChromaRetriever:
             raise
     
     def _get_embedding_function(self):
-    # """获取自定义嵌入函数"""
-    # 定义符合ChromaDB新接口要求的嵌入函数类
-        class CustomEmbeddingFunction:
-            def __init__(self, embedder):
-                self.embedder = embedder
-            
-            def __call__(self, input):
-            # """ChromaDB要求的嵌入函数签名"""
-                if isinstance(input, str):
-                    texts = [input]
-                else:
-                    texts = input
-
-                if not texts:
-                    return []
-            
-            # 使用bge模型生成嵌入
-                embeddings = self.embedder.encode(texts)
-                return embeddings.tolist()
-            # 需要添加的方法 👇
-            def embed_query(self, query=None, **kwargs):
-                """添加单个查询文本的嵌入方法"""
-                # 处理不同的参数传递方式
-                if query is None:
-                # 检查kwargs中的常见参数名
-                    query = kwargs.get('input', kwargs.get('texts', ''))
-                # 如果是从texts传入的列表，取第一个元素
-                    if isinstance(query, list) and len(query) > 0:
-                        query = query[0]
-            
-            # 确保query是字符串类型
-                if not isinstance(query, str) or not query.strip():
-                    return []
-                
-            # 使用bge模型生成单个查询的嵌入
-                embedding = self.embedder.encode([query.strip()])
-                if isinstance(embedding, np.ndarray):
-                    return embedding.tolist()
-                else:
-                    return [embedding.tolist()] if hasattr(embedding, 'tolist') else [list(embedding)]
-            
-            def embed_documents(self, texts=None, **kwargs):
-                """添加批量文档嵌入方法，支持额外关键字参数"""
-                # 处理不同的参数传递方式
-                if texts is None:
-                    texts = kwargs.get('input', kwargs.get('texts', []))
-            
-            # 确保texts是列表类型
-                if isinstance(texts, str):
-                    texts = [texts]
-                elif not isinstance(texts, list):
-                    texts = list(texts) if texts else []
-            
-                if not texts:
-                    return []
-                
-            # 过滤空字符串并去除空白
-                valid_texts = [text.strip() for text in texts if isinstance(text, str) and text.strip()]
-                if not valid_texts:
-                    return []
-            
-            # 使用bge模型生成批量嵌入
-                embeddings = self.embedder.encode(valid_texts)
-            # 确保返回的是二维列表格式
-                if isinstance(embeddings, np.ndarray):
-                    return embeddings.tolist()
-                else:
-                    return embeddings.tolist() if hasattr(embeddings, 'tolist') else list(embeddings)
+        """简化版嵌入函数"""
+        embedder = self.embedder
     
+        # 创建简单的嵌入函数
+        def embedding_function(texts):
+            if isinstance(texts, str):
+                texts = [texts]
+            embeddings = embedder.encode(texts)
+            return embeddings.tolist()
     
-        return CustomEmbeddingFunction(self.embedder)
+        return embedding_function
     
     def is_ready(self) -> bool:
         """检查检索器是否就绪"""
@@ -208,9 +148,9 @@ class ChromaRetriever:
         
         try:
             logger.info(f"执行语义检索: '{query}'")
-            
+            query_embedding = self.embedder.encode([query]).tolist()
             results = self.collection.query(
-                query_texts=[query],
+                query_embeddings=query_embedding,
                 n_results=top_k,
                 include=["metadatas", "documents", "distances"]
             )
