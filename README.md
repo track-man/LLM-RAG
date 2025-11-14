@@ -66,6 +66,13 @@ python main.py --init
 ```
 
 
+### 清理缓存
+如果对多个实验要清理缓存：
+```python
+python main.py --clear-cache
+```
+
+
 ### 启动交互式查询
 运行主程序，输入查询即可体验RAG+幻觉纠正流程：
 ```bash
