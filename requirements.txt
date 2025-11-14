@@ -25,3 +25,5 @@ python-dotenv==1.0.1
 # 配置管理
 python-dotenv>=1.0.1
 
+PyYAML>=6.0
+pathlib2>=2.3.0; python_version < "3.4"
