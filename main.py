@@ -201,7 +201,47 @@ def clear_cache(include_embeddings: bool = True, include_logs: bool = True) -> N
     logger.info("缓存清除操作完成")
 
 # 在main.py中添加命令行支持
+def main() -> None:
+    # 加载环境变量（如API密钥）
+    load_dotenv()
 
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(description="RAG减弱大模型幻觉系统")
+    parser.add_argument(
+        "--init", 
+        action="store_true", 
+        help="初始化系统（构建向量库，首次运行需执行）"
+    )
+    parser.add_argument(
+        "--experiment", 
+        action="store_true", 
+        help="实验模式（批量运行数据集测试，需额外实现run_experiments.py）"
+    )
+    # 添加清除缓存的参数
+    parser.add_argument(
+        "--clear-cache", 
+        action="store_true", 
+        help="清除系统缓存（包括向量库、日志和中间文件）"
+    )
+    args = parser.parse_args()
+
+    # 执行清除缓存
+    if args.clear_cache:
+        clear_cache()
+    # 执行初始化
+    elif args.init:
+        init_system()
+    # 执行实验模式（需补充experiments/run_experiments.py逻辑）
+    elif args.experiment:
+        logger.info("启动实验模式，开始批量数据集测试...")
+        # 此处需调用experiments/run_experiments.py的自动化逻辑
+        # 示例：
+        # from experiments.run_experiments import run_batch_tests
+        # run_batch_tests()
+    # 默认启动交互式查询
+    else:
+        interactive_query()
+        
 if __name__ == "__main__":
     main()
     import argparse
