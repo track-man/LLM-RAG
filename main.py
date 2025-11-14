@@ -153,7 +153,64 @@ def main() -> None:
     # 默认启动交互式查询
     else:
         interactive_query()
+import shutil
+import logging
+from pathlib import Path
+import config
 
+logger = logging.getLogger(__name__)
+
+def clear_cache(include_embeddings: bool = True, include_logs: bool = True) -> None:
+    """
+    一键清除系统缓存数据
+    
+    Args:
+        include_embeddings: 是否删除嵌入向量库（chroma_db）
+        include_logs: 是否删除日志文件
+    """
+    logger.info("开始清除缓存...")
+    
+    # 1. 删除Chroma向量库（嵌入向量文件）
+    if include_embeddings and config.CHROMA_DB_PATH.exists():
+        try:
+            shutil.rmtree(config.CHROMA_DB_PATH)
+            logger.info(f"已删除向量库: {config.CHROMA_DB_PATH}")
+            # 重新创建空目录（保持目录结构）
+            config.CHROMA_DB_PATH.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"删除向量库失败: {str(e)}")
+    
+    # 2. 删除日志文件
+    if include_logs and config.LOGS_PATH.exists():
+        try:
+            for log_file in config.LOGS_PATH.glob("*.log"):
+                log_file.unlink()
+            logger.info(f"已删除日志文件: {config.LOGS_PATH}")
+        except Exception as e:
+            logger.error(f"删除日志文件失败: {str(e)}")
+    
+    # 3. 删除处理中间文件
+    if config.PROCESSED_DOCS_PATH.exists():
+        try:
+            shutil.rmtree(config.PROCESSED_DOCS_PATH)
+            logger.info(f"已删除处理中间文件: {config.PROCESSED_DOCS_PATH}")
+            config.PROCESSED_DOCS_PATH.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            logger.error(f"删除处理中间文件失败: {str(e)}")
+    
+    logger.info("缓存清除操作完成")
+
+# 在main.py中添加命令行支持
 
 if __name__ == "__main__":
     main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--init", action="store_true", help="初始化系统（构建向量库）")
+    parser.add_argument("--clear-cache", action="store_true", help="清除缓存数据")
+    args = parser.parse_args()
+    
+    if args.clear_cache:
+        clear_cache()
+    elif args.init:
+        init_system()
