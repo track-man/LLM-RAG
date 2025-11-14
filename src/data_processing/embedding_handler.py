@@ -131,8 +131,15 @@ class EmbeddingHandler:
             # 创建Chroma客户端
             client = self.create_chroma_client(Path(chroma_path))
             
-            # 获取或创建集合
-            collection = client.get_or_create_collection(
+            # 在获取集合前先删除旧集合
+            try:
+                client.delete_collection(collection_name)
+                logger.info(f"已删除旧集合 {collection_name}")
+            except Exception as e:
+                logger.info(f"集合 {collection_name} 不存在，直接创建新集合")
+
+            # 再创建新集合
+            collection = client.create_collection(
                 name=collection_name,
                 metadata={"description": "RAG系统文档分块集合"}
             )
@@ -149,7 +156,8 @@ class EmbeddingHandler:
                 print(f"处理批次 {i//batch_size + 1}/{(total_chunks-1)//batch_size + 1}, 文档数: {len(batch_chunks)}")
                 
                 # 准备数据
-                ids = [f"doc_{j}" for j in range(i, end_idx)]
+                import uuid
+                ids = [f"doc_{uuid.uuid4().hex[:8]}" for _ in range(len(batch_chunks))]
                 documents = [chunk.get("text") for chunk in batch_chunks]
                 metadatas = [chunk.get("metadata") for chunk in batch_chunks]
                 
