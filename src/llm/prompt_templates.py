@@ -16,7 +16,7 @@ from typing import List, Dict, Optional
 INITIAL_ANSWER_TEMPLATE = """
 请基于以下参考文档回答问题，不需要进行事实核查或验证，提供最合适的答案。
 
-问题: {question}
+问题: {query}
 
 参考文档:
 {chunks_text}
@@ -60,7 +60,7 @@ FACT_VERIFICATION_TEMPLATE = """
 作为事实核查专家，请基于提供的证据验证以下声明的真实性。
 
 查询意图：{intent}
-原始查询："{query}"
+原始查询："{question}"
 需要验证的声明："{claim}"
 
 相关证据片段：
@@ -135,51 +135,22 @@ AI初始回答: "{initial_answer}"
 """
 
 # ==================== 答案纠正模板 ====================
-CORRECTION_TEMPLATES = {
-    "事实查询": """
-    作为事实核查专家，请根据验证结果重新生成一个准确的事实性答案。
-    
-    查询意图：{intent} - 事实查询
-    原始查询："{query}"
-    初始答案：{initial_answer}
-    验证结果摘要：{verification_summary}
-    
-    修正后的答案：
-    """,
-    
-    "比较查询": """
-    作为比较分析专家，请根据验证结果重新生成一个全面准确的比较性答案。
-    
-    查询意图：{intent} - 比较查询  
-    原始查询："{query}"
-    初始答案：{initial_answer}
-    验证结果摘要：{verification_summary}
-    
-    修正后的比较分析：
-    """,
-    
-    "方法查询": """
-    作为方法指导专家，请根据验证结果重新生成一个可操作的方法指南。
-    
-    查询意图：{intent} - 方法查询
-    原始查询："{query}"
-    初始答案：{initial_answer}
-    验证结果摘要：{verification_summary}
-    
-    修正后的方法指南：
-    """,
-    
-    "观点查询": """
-    作为观点综述专家，请根据验证结果重新生成一个平衡客观的观点综述。
-    
-    查询意图：{intent} - 观点查询
-    原始查询："{query}"
-    初始答案：{initial_answer}
-    验证结果摘要：{verification_summary}
-    
-    修正后的观点综述：
-    """
-}
+CORRECTION_TEMPLATE = """
+作为专业的内容修正专家，请根据验证结果重新生成准确、客观的答案。
+
+原始查询："{query}"
+初始答案：{initial_answer}
+验证结果摘要：{verification_summary}
+
+## 修正要求
+1. 严格基于验证证据修正错误，移除未经证实的信息
+2. 对无法验证的内容明确标注不确定性
+3. 保持回答的完整性、逻辑性和可读性
+4. 若涉及比较，需平衡呈现各方特点；若涉及方法，需保证步骤可行性
+5. 客观中立，避免主观偏向
+
+修正后的答案：
+"""
 
 # ==================== 比较分析模板 ====================
 COMPARISON_ANALYSIS_TEMPLATE = """
@@ -188,7 +159,7 @@ COMPARISON_ANALYSIS_TEMPLATE = """
 ## 基本信息
 - **分析时间**: {timestamp}
 - **查询类型**: {intent}
-- **原始问题**: "{question}"
+- **原始问题**: "{query}"
 
 ## 回答对比
 
@@ -224,7 +195,7 @@ def get_initial_prompt(query: str, chunks: List[Dict]) -> str:
     """
     # 格式化文档片段为字符串
     chunks_text = "\n".join([
-        f"文档片段 {i+1}:\n{chunk['text']}" 
+        f"文档片段 {i+1}:\n{chunk['content']}" 
         for i, chunk in enumerate(chunks)
     ])
     return INITIAL_ANSWER_TEMPLATE.format(
@@ -259,71 +230,13 @@ def get_hallucination_detection_prompt(self, question: str, initial_answer: str,
         evidence=evidence
     )
 
-def get_correction_prompt(answer: str, chunks: List[Dict], errors: List[str], query: str) -> str:
-    """获取答案纠正提示词
-    适配rag_pipeline的调用参数要求：接收answer、chunks和errors参数
-    """
-    # 从chunks中提取证据文本并保留元数据，增强证据可信度
-    evidence_text = "\n".join([
-        f"文档片段 {i+1} (来源: {chunk.get('metadata', {}).get('source', '未知')}):\n{chunk['text']}" 
-        for i, chunk in enumerate(chunks)
-    ])
-    
-    # 格式化错误信息，关联证据片段索引
-    errors_text = []
-    for idx, error in enumerate(errors, 1):
-        # 尝试匹配错误对应的证据片段（通过关键词匹配）
-        related_chunks = []
-        for chunk_idx, chunk in enumerate(chunks, 1):
-            if any(keyword in chunk['text'].lower() for keyword in error.lower().split()[:3]):
-                related_chunks.append(chunk_idx)
-        
-        if related_chunks:
-            errors_text.append(f"- 问题 {idx}: {error}（相关参考：文档片段 {','.join(map(str, related_chunks))}）")
-        else:
-            errors_text.append(f"- 问题 {idx}: {error}（未找到直接相关参考）")
-    errors_text = "\n".join(errors_text)
-    
-    # 生成验证摘要，突出证据驱动原则
-    verification_summary = f"""## 验证发现的问题
-{errors_text}
-
-## 参考证据（共{len(chunks)}个片段）
-{evidence_text}
-
-## 纠正要求
-1. 严格基于上述证据修正错误，不添加未经证实的信息
-2. 对无法验证的内容明确标注不确定性
-3. 保持回答的完整性和逻辑性"""
-    
-    # 调用意图分类模板获取查询类型（使用真实query）
-    intent_prompt = get_intent_classification_prompt(query=query)
-    # 注意：实际使用时需调用LLM获取intent，此处为示例
-    # intent = llm_inference(prompt=intent_prompt, temperature=0.0)
-    # 临时 fallback 逻辑
-    intent = "事实查询"
-    for keyword in ["比较", "对比", "区别"]:
-        if keyword in query:
-            intent = "比较查询"
-            break
-    for keyword in ["如何", "步骤", "方法"]:
-        if keyword in query:
-            intent = "方法查询"
-            break
-    for keyword in ["观点", "评价", "看法"]:
-        if keyword in query:
-            intent = "观点查询"
-            break
-    
-    # 根据意图选择对应模板并填充参数
-    template = CORRECTION_TEMPLATES.get(intent, CORRECTION_TEMPLATES["事实查询"])
-    return template.format(
-        intent=intent,
+def get_correction_prompt(query: str, answer: str, verification_summary: str) -> str:
+    """获取统一的答案纠正提示词（移除意图参数）"""
+    return CORRECTION_TEMPLATE.format(
         query=query,
         initial_answer=answer,
         verification_summary=verification_summary
     )
-
 def get_comparison_analysis_prompt(self, question: str, intent: str, initial_answer: str, 
                                 verified_answer: str, hallucination_summary: str) -> str:
     """获取比较分析提示词"""

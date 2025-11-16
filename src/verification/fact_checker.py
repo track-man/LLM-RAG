@@ -210,7 +210,7 @@ class FactChecker:
         for number in numbers:
             found_in_chunks = 0
             for chunk in chunks:
-                if number in chunk['text']:
+                if number in chunk['content']:
                     found_in_chunks += 1
 
             # 如果数字在多个文档块中都出现，认为是支持的
@@ -229,7 +229,7 @@ class FactChecker:
 
             found_in_chunks = 0
             for chunk in chunks:
-                if entity.lower() in chunk['text'].lower():
+                if entity.lower() in chunk['content'].lower():
                     found_in_chunks += 1
 
             # 如果实体在检索文档中未找到，可能存在问题
@@ -256,7 +256,7 @@ class FactChecker:
                     continue
 
                 for chunk in chunks:
-                    if word.lower() in chunk['text'].lower():
+                    if word.lower() in chunk['content'].lower():
                         support_score += 1
                         break
 
@@ -319,7 +319,7 @@ LLM回答:
 """
 
         for i, chunk in enumerate(chunks):
-            prompt += f"\n文档片段 {i+1}:\n{chunk['text']}\n"
+            prompt += f"\n文档片段 {i+1}:\n{chunk['content']}\n"
 
         prompt += """
 请从以下几个方面进行验证：
@@ -480,7 +480,7 @@ LLM回答:
         evidence_chunks = []
         for chunk in chunks:
             evidence_chunks.append({
-                'text': chunk['text'][:200] + '...' if len(chunk['text']) > 200 else chunk['text'],
+                'text': chunk['content'][:200] + '...' if len(chunk['content']) > 200 else chunk['content'],
                 'metadata': chunk.get('metadata', {}),
                 'relevance_score': chunk.get('distance', 0.0)
             })

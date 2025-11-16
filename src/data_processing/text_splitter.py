@@ -408,7 +408,7 @@ if __name__ == "__main__":
         
         # 显示前3个分块
         for i, chunk in enumerate(chunks[:3]):
-            print(f"块 {i+1}: {chunk['text']} (长度: {len(chunk['text'])})")
+            print(f"块 {i+1}: {chunk['content']} (长度: {len(chunk['content'])})")
         
     except Exception as e:
         print(f"测试失败: {str(e)}")
