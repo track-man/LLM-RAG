@@ -1,6 +1,8 @@
-from typing import List, Dict, Any
-from src.llm.deepseek_client  import LLMAdapter
 
+from typing import List, Dict, Any
+from src.llm.deepseek_client import LLMAdapter
+
+from src.llm.prompt_templates import CORRECTION_TEMPLATES, get_correction_prompt
 
     
 def __init__(self, llm_adapter: LLMAdapter):
@@ -14,41 +16,59 @@ def __init__(self, llm_adapter: LLMAdapter):
         "观点查询": self._get_opinion_correction_template()
     }
 
-def correct_answer(self, original_answer: str, verifications: List[Dict], 
-                    query: str, intent: str) -> Dict[str, Any]:
-    """生成纠正后的答案"""
+# 修改后的 correct_answer 函数（适配输入输出规范，移除意图分析）
+def correct_answer(answer: str, chunks: List[Dict], errors: List[str]) -> str:#ffffffffffffffffffffffffffffffffffffffffffffk
+    """
+    基于验证错误和文档块纠正回答
+    输入：
+        answer: 当前回答字符串
+        chunks: 检索到的文档块列表
+        errors: 错误描述列表
+    输出：
+        纠正后的回答字符串
+    """
+    from src.llm.prompt_templates import CORRECTION_TEMPLATES
+    from src.llm.deepseek_client import llm_inference
+
+    # 1. 提取原始查询（从文档块元数据）
+    query = chunks[0].get("metadata", {}).get("query", "未知查询") if chunks else "未知查询"
     
-    template = self.correction_templates.get(intent, self._get_factual_correction_template())
-    verification_summary = self._prepare_verification_summary(verifications)
+    # 2. 生成验证摘要（基于错误和文档块）
+    def _prepare_verification_summary(errors: List[str], chunks: List[Dict]) -> str:
+        if not errors:
+            return "未发现错误"
+        
+        summary_parts = []
+        for i, error in enumerate(errors, 1):
+            # 匹配相关证据文档块
+            related_chunks = [c for c in chunks if error in c.get('text', '')]
+            evidence_text = "\n".join([f"文档{i+1}: {c['text'][:100]}..." for i, c in enumerate(related_chunks[:2])])
+            
+            summary_parts.append(f"错误{i}: {error}")
+            summary_parts.append(f"相关证据: {evidence_text if evidence_text else '无'}")
+            summary_parts.append("---")
+        
+        return "\n".join(summary_parts)
     
+    verification_summary = _prepare_verification_summary(errors, chunks)
+    
+    # 3. 使用默认事实查询模板（移除意图分析）
+    template = CORRECTION_TEMPLATES["事实查询"]
     prompt = template.format(
         query=query,
-        intent=intent,
-        original_answer=original_answer,
+        intent="事实查询",  # 固定为事实查询，移除意图分析
+        initial_answer=answer,
         verification_summary=verification_summary
     )
     
-    response = self.llm.call_with_retry(
+    # 4. 调用LLM生成纠正结果
+    response = llm_inference(
         prompt=prompt,
-        max_tokens=1200,
-        temperature=0.3
+        temperature=0.3,
+        max_tokens=1200
     )
     
-    if response.get('error'):
-        corrected_text = f"纠正过程出错: {response.get('error_message', '未知错误')}"
-    else:
-        corrected_text = response['text']
-    
-    return {
-        "corrected_answer": corrected_text,
-        "original_answer": original_answer,
-        "query": query,
-        "intent": intent,
-        "verifications_count": len(verifications),
-        "supported_claims": len([v for v in verifications if v.get('verdict') == 'SUPPORTED']),
-        "contradicted_claims": len([v for v in verifications if v.get('verdict') == 'CONTRADICTED']),
-        "correction_metadata": response.get('usage', {})
-    }
+    return response
 
 def _prepare_verification_summary(self, verifications: List[Dict]) -> str:
     """准备验证结果摘要"""

@@ -136,14 +136,18 @@ AI初始回答: "{initial_answer}"
 
 # ==================== 答案纠正模板 ====================
 CORRECTION_TEMPLATE = """
-作为专业的内容修正专家，请根据验证结果重新生成准确、客观的答案。
+作为专业的内容修正专家，请根据验证结果和参考文档重新生成准确、客观的答案。
 
-原始查询："{query}"
-初始答案：{initial_answer}
-验证结果摘要：{verification_summary}
+初始答案：{answer}
+
+参考文档片段：
+{chunks}
+
+验证发现的问题：
+{verification_summary}
 
 ## 修正要求
-1. 严格基于验证证据修正错误，移除未经证实的信息
+1. 严格基于参考文档修正错误，移除未经证实的信息
 2. 对无法验证的内容明确标注不确定性
 3. 保持回答的完整性、逻辑性和可读性
 4. 若涉及比较，需平衡呈现各方特点；若涉及方法，需保证步骤可行性
@@ -203,46 +207,54 @@ def get_initial_prompt(query: str, chunks: List[Dict]) -> str:
         chunks_text=chunks_text
     )
 
-def get_intent_classification_prompt(self, query: str) -> str:
+def get_initial_prompt(question: str) -> str:
+    """获取初始回答生成提示词"""
+    # 直接使用模块级变量，而非self.变量
+    return INITIAL_ANSWER_TEMPLATE.format(question=question)
+
+def get_intent_classification_prompt(query: str) -> str:
     """获取意图分类提示词"""
-    return self.INTENT_CLASSIFICATION_TEMPLATE.format(query=query)
+    return INTENT_CLASSIFICATION_TEMPLATE.format(query=query)
 
-def get_claim_extraction_prompt(self, text: str) -> str:
+def get_claim_extraction_prompt(text: str) -> str:
     """获取声明提取提示词"""
-    return self.CLAIM_EXTRACTION_TEMPLATE.format(text=text)
+    return CLAIM_EXTRACTION_TEMPLATE.format(text=text)
 
-def get_fact_verification_prompt(self, intent: str, query: str, claim: str, evidence_text: str) -> str:
+def get_fact_verification_prompt(intent: str, query: str, claim: str, evidence_text: str) -> str:
     """获取事实验证提示词"""
-    return self.FACT_VERIFICATION_TEMPLATE.format(
+    return FACT_VERIFICATION_TEMPLATE.format(
         intent=intent,
         query=query,
         claim=claim,
         evidence_text=evidence_text
     )
 
-def get_hallucination_detection_prompt(self, question: str, initial_answer: str, 
-                                        verified_answer: str, evidence: str) -> str:
+def get_hallucination_detection_prompt(question: str, initial_answer: str, 
+                                      verified_answer: str, evidence: str) -> str:
     """获取幻觉检测提示词"""
-    return self.HALLUCINATION_DETECTION_TEMPLATE.format(
+    return HALLUCINATION_DETECTION_TEMPLATE.format(
         question=question,
         initial_answer=initial_answer,
         verified_answer=verified_answer,
         evidence=evidence
     )
 
-def get_correction_prompt(query: str, answer: str, verification_summary: str) -> str:
-    """获取统一的答案纠正提示词（移除意图参数）"""
-    return CORRECTION_TEMPLATE.format(
+def get_correction_prompt(intent: str, query: str, initial_answer: str, verification_summary: str) -> str:
+    """获取答案纠正提示词"""
+    # 直接使用模块级的CORRECTION_TEMPLATES，而非self.变量
+    template = CORRECTION_TEMPLATES.get(intent, CORRECTION_TEMPLATES["事实查询"])
+    return template.format(
+        intent=intent,
         query=query,
-        initial_answer=answer,
+        initial_answer=initial_answer,
         verification_summary=verification_summary
     )
-def get_comparison_analysis_prompt(self, question: str, intent: str, initial_answer: str, 
-                                verified_answer: str, hallucination_summary: str) -> str:
+
+def get_comparison_analysis_prompt(question: str, intent: str, initial_answer: str, 
+                                 verified_answer: str, hallucination_summary: str) -> str:
     """获取比较分析提示词"""
     from datetime import datetime
-    
-    return self.COMPARISON_ANALYSIS_TEMPLATE.format(
+    return COMPARISON_ANALYSIS_TEMPLATE.format(
         timestamp=datetime.now().isoformat(),
         intent=intent,
         question=question,
@@ -258,7 +270,6 @@ def get_comparison_analysis_prompt(self, question: str, intent: str, initial_ans
         key_improvements="1. 事实准确性提升\n2. 证据支持增强\n3. 逻辑一致性改善",
         overall_assessment="验证过程显著提升了回答的可靠性和准确性"
     )
-
 
 class EnhancedPipeline:
     """增强的流程管理器 - 集成初始回答、验证和幻觉检测"""
