@@ -1,17 +1,8 @@
 .env
-
 # 新增：临时数据/缓存目录
 data/chroma_db/          # 向量库生成的临时数据（可重新构建）
 experiments/datasets/interim/  # 数据处理中间文件
 results/logs/            # 运行日志（动态生成）
-data/chroma_db/chroma.sqlite3
-src/retrieval/__pycache__/chroma_retriever.cpython-313.pyc
-data/chroma_db/acb057e3-a45e-4747-911a-79948b7d60bf/data_level0.bin
-data/chroma_db/acb057e3-a45e-4747-911a-79948b7d60bf/header.bin
-data/chroma_db/acb057e3-a45e-4747-911a-79948b7d60bf/index_metadata.pickle
-data/chroma_db/acb057e3-a45e-4747-911a-79948b7d60bf/length.bin
-.gitignore
-data/chroma_db/acb057e3-a45e-4747-911a-79948b7d60bf/link_lists.bin
-data/chroma_db
-__pycache__/config.cpython-313.pyc
-__pycache__/config.cpython-313.pyc
+src/retrieval/__pycache__/
+**/__pycache__/
+

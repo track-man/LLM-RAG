@@ -9,18 +9,20 @@
 3. 完整的比较分析框架
 """
 
-
+from typing import List, Dict, Optional
 """增强版Prompt模板管理器"""
     
 # ==================== 初始回答生成模板 ====================
 INITIAL_ANSWER_TEMPLATE = """
-请直接回答以下问题，不需要进行事实核查或验证，提供您认为最合适的答案。
+请基于以下参考文档回答问题，不需要进行事实核查或验证，提供最合适的答案。
 
 问题: {question}
 
+参考文档:
+{chunks_text}
+
 请提供详细、全面的回答，包括所有相关信息和背景知识：
 """
-
 # ==================== 意图分类模板 ====================
 INTENT_CLASSIFICATION_TEMPLATE = """
 你是一个专业的查询意图分类器。你的任务是根据用户查询的内容，准确判断其意图类型。
@@ -216,9 +218,19 @@ COMPARISON_ANALYSIS_TEMPLATE = """
 {overall_assessment}
 """
 
-def get_initial_prompt(self, question: str) -> str:
-    """获取初始回答生成提示词"""
-    return self.INITIAL_ANSWER_TEMPLATE.format(question=question)
+def get_initial_prompt(query: str, chunks: List[Dict]) -> str:
+    """获取初始回答生成提示词
+    适配rag_pipeline的调用参数要求：接收query和chunks参数
+    """
+    # 格式化文档片段为字符串
+    chunks_text = "\n".join([
+        f"文档片段 {i+1}:\n{chunk['text']}" 
+        for i, chunk in enumerate(chunks)
+    ])
+    return INITIAL_ANSWER_TEMPLATE.format(
+        query=query,
+        chunks_text=chunks_text
+    )
 
 def get_intent_classification_prompt(self, query: str) -> str:
     """获取意图分类提示词"""
@@ -247,13 +259,68 @@ def get_hallucination_detection_prompt(self, question: str, initial_answer: str,
         evidence=evidence
     )
 
-def get_correction_prompt(self, intent: str, query: str, initial_answer: str, verification_summary: str) -> str:
-    """获取答案纠正提示词"""
-    template = self.CORRECTION_TEMPLATES.get(intent, self.CORRECTION_TEMPLATES["事实查询"])
+def get_correction_prompt(answer: str, chunks: List[Dict], errors: List[str], query: str) -> str:
+    """获取答案纠正提示词
+    适配rag_pipeline的调用参数要求：接收answer、chunks和errors参数
+    """
+    # 从chunks中提取证据文本并保留元数据，增强证据可信度
+    evidence_text = "\n".join([
+        f"文档片段 {i+1} (来源: {chunk.get('metadata', {}).get('source', '未知')}):\n{chunk['text']}" 
+        for i, chunk in enumerate(chunks)
+    ])
+    
+    # 格式化错误信息，关联证据片段索引
+    errors_text = []
+    for idx, error in enumerate(errors, 1):
+        # 尝试匹配错误对应的证据片段（通过关键词匹配）
+        related_chunks = []
+        for chunk_idx, chunk in enumerate(chunks, 1):
+            if any(keyword in chunk['text'].lower() for keyword in error.lower().split()[:3]):
+                related_chunks.append(chunk_idx)
+        
+        if related_chunks:
+            errors_text.append(f"- 问题 {idx}: {error}（相关参考：文档片段 {','.join(map(str, related_chunks))}）")
+        else:
+            errors_text.append(f"- 问题 {idx}: {error}（未找到直接相关参考）")
+    errors_text = "\n".join(errors_text)
+    
+    # 生成验证摘要，突出证据驱动原则
+    verification_summary = f"""## 验证发现的问题
+{errors_text}
+
+## 参考证据（共{len(chunks)}个片段）
+{evidence_text}
+
+## 纠正要求
+1. 严格基于上述证据修正错误，不添加未经证实的信息
+2. 对无法验证的内容明确标注不确定性
+3. 保持回答的完整性和逻辑性"""
+    
+    # 调用意图分类模板获取查询类型（使用真实query）
+    intent_prompt = get_intent_classification_prompt(query=query)
+    # 注意：实际使用时需调用LLM获取intent，此处为示例
+    # intent = llm_inference(prompt=intent_prompt, temperature=0.0)
+    # 临时 fallback 逻辑
+    intent = "事实查询"
+    for keyword in ["比较", "对比", "区别"]:
+        if keyword in query:
+            intent = "比较查询"
+            break
+    for keyword in ["如何", "步骤", "方法"]:
+        if keyword in query:
+            intent = "方法查询"
+            break
+    for keyword in ["观点", "评价", "看法"]:
+        if keyword in query:
+            intent = "观点查询"
+            break
+    
+    # 根据意图选择对应模板并填充参数
+    template = CORRECTION_TEMPLATES.get(intent, CORRECTION_TEMPLATES["事实查询"])
     return template.format(
         intent=intent,
         query=query,
-        initial_answer=initial_answer,
+        initial_answer=answer,
         verification_summary=verification_summary
     )
 
