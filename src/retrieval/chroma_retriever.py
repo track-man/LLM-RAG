@@ -39,7 +39,7 @@ class ChromaRetriever:
         
         # 检索参数
         self.default_top_k = 5
-        self.similarity_threshold = 0.7
+        self.similarity_threshold = 0.1
         
         # 组件
         self.client = None
