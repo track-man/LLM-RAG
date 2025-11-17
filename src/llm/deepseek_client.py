@@ -1,38 +1,16 @@
 """
 DeepSeek客户端模块 - 封装LLMAdapter供RAG流程调用
+适配rag_pipeline接口要求
 """
 import os
 import sys
 from typing import Dict, Any, Optional
-import yaml
 
 # 添加父目录到路径，确保可以导入LLMAdapter
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from src.llm.llm_adapter import LLMAdapter  # 假设LLMAdapter在这个路径
-
-# 配置文件路径
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "config", "llm_config.yaml")
-
-def load_llm_config() -> Dict[str, Any]:
-    """
-    加载LLM配置
-    """
-    try:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-            config = yaml.safe_load(f)
-        return config.get('deepseek', {})
-    except Exception as e:
-        print(f"配置文件加载失败: {e}")
-        # 返回默认配置
-        return {
-            'provider': 'deepseek',
-            'api_key': os.getenv('DEEPSEEK_API_KEY', ''),
-            'base_url': 'https://api.deepseek.com/v1',
-            'model': 'deepseek-chat',
-            'max_tokens': 2000,
-            'temperature': 0.1
-        }
+from src.llm.llm_adapter import LLMAdapter
+import config  # 导入统一配置
 
 def llm_inference(prompt: str, 
                  temperature: float = 0.1,
@@ -53,19 +31,13 @@ def llm_inference(prompt: str,
         LLM生成的文本内容
     """
     try:
-        # 加载配置
-        config = load_llm_config()
+        # 使用统一配置
+        llm_config = config.LLM_CONFIG
         
-        # 更新配置参数
-        if temperature is not None:
-            config['temperature'] = temperature
-        if max_tokens is not None:
-            config['max_tokens'] = max_tokens
-            
         # 创建LLM适配器实例
         llm_adapter = LLMAdapter(
-            provider=config['provider'],
-            config=config
+            provider=llm_config["provider"],
+            config=llm_config
         )
         
         # 调用LLM
@@ -105,10 +77,10 @@ def llm_inference_with_retry(prompt: str,
         LLM生成的文本内容
     """
     try:
-        config = load_llm_config()
+        llm_config = config.LLM_CONFIG
         llm_adapter = LLMAdapter(
-            provider=config['provider'],
-            config=config
+            provider=llm_config["provider"],
+            config=llm_config
         )
         
         result = llm_adapter.call_with_retry(

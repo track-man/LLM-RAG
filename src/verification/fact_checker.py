@@ -371,7 +371,7 @@ LLM回答:
 
             # 发送API请求
             response = requests.post(
-                api_config.get('base_url', 'https://api.deepseek.com/v1/chat/completions'),
+                api_config.get('base_url', 'https://api.deepseek.com/v1'),
                 headers=headers,
                 json=payload,
                 timeout=api_config.get('timeout', 30)

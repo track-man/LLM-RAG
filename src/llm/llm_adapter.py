@@ -1,11 +1,11 @@
+"""
+LLM适配器模块
+支持多提供商LLM调用
+"""
 import os
-import json
 import time
-from typing import Dict, Any, Optional, List
-import requests
-import openai
+from typing import Dict, Any, Optional
 from openai import OpenAI
-import yaml
 
 class LLMAdapter:
     """LLM客户端适配器，支持多提供商"""
@@ -46,7 +46,7 @@ class LLMAdapter:
         
         try:
             response = self.client.chat.completions.create(
-                model=self.config.get('model'),
+                model=self.config.get('model_name', self.config.get('model', 'deepseek-chat')),
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
