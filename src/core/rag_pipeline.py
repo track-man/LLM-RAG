@@ -205,5 +205,12 @@ def rag_with_fact_checking(
         result["final_answer"] = f"系统出错：{error_msg}"
         result["process_log"] = process_log
         logger.error(error_msg, exc_info=True)
+        
+    # 新增：在命令行打印结果
+    print("\n===== 流程结果 =====")
+    import json
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
+    # 新增：在日志中记录结果
+    logger.info("流程最终结果: %s", json.dumps(result, ensure_ascii=False, indent=2))
     return result
