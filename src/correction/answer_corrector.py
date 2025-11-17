@@ -1,9 +1,8 @@
 
 from typing import List, Dict, Any
-from src.llm.deepseek_client import LLMAdapter
+from src.llm2.deepseek_client import LLMAdapter
 
-from src.llm.prompt_templates import CORRECTION_TEMPLATES, get_correction_prompt
-
+from src.llm2.prompt_templates import CORRECTION_TEMPLATES, get_correction_prompt
     
 def __init__(self, llm_adapter: LLMAdapter):
     self.llm = llm_adapter

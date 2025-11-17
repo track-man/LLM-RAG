@@ -22,7 +22,7 @@ class LLMAdapter:
         elif self.provider == "deepseek":
             return OpenAI(
                 api_key=self.config.get('api_key'),
-                base_url=self.config.get('base_url', 'https://chat.deepseek.com/')
+                base_url=self.config.get('base_url')
             )
         else:
             raise ValueError(f"不支持的LLM提供商: {self.provider}")
