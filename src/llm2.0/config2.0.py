@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-#将 config.yaml 的内容统一到 全局的config.py 中，暂时放在这
+
 # 加载.env文件中的敏感信息
 load_dotenv()
 
@@ -25,34 +25,22 @@ for path in [
 ]:
     path.mkdir(parents=True, exist_ok=True)
 
-# ========================= 加载YAML配置 =========================
-def load_yaml_config():
-    """从YAML文件加载配置"""
-    yaml_config_path = PROJECT_ROOT / "config.yaml"
-    if yaml_config_path.exists():
-        with open(yaml_config_path, 'r', encoding='utf-8') as f:
-            return yaml.safe_load(f)
-    return {}
-
-# 加载YAML配置
-YAML_CONFIG = load_yaml_config()
-
 # ========================= 模型与API配置 =========================
-# LLM配置（优先使用YAML配置）
+# LLM（Deepseek）配置
 LLM_CONFIG = {
-    "provider": YAML_CONFIG.get('llm', {}).get('provider', 'deepseek'),
+    "provider": "deepseek",
     "api_key": os.getenv("DEEPSEEK_API_KEY", ""),
-    "base_url": YAML_CONFIG.get('llm', {}).get('base_url', 'https://api.deepseek.com/v1'),
-    "model_name": YAML_CONFIG.get('llm', {}).get('model', 'deepseek-chat'),
-    "temperature": YAML_CONFIG.get('llm', {}).get('temperature', 0.1),
-    "max_tokens": YAML_CONFIG.get('llm', {}).get('max_tokens', 1000),
+    "base_url": "https://api.deepseek.com/v1",
+    "model_name": "deepseek-chat",
+    "temperature": 0.1,
+    "max_tokens": 1000,
     "top_p": 0.9,
     "timeout": 30,
 }
 
 # 嵌入模型配置
 EMBEDDING_CONFIG = {
-    "model_name": YAML_CONFIG.get('vector_db', {}).get('embedding_model', 'BAAI/bge-base-en-v1.5'),
+    "model_name": "BAAI/bge-base-en-v1.5",
     "embedding_dim": 768,
     "device": "auto",
     "normalize_embeddings": True,
@@ -61,9 +49,9 @@ EMBEDDING_CONFIG = {
 # 向量数据库配置
 VECTOR_DB_CONFIG = {
     "embedding_model": EMBEDDING_CONFIG["model_name"],
-    "db_path": YAML_CONFIG.get('vector_db', {}).get('db_path', str(CHROMA_DB_PATH)),
-    "collection_name": YAML_CONFIG.get('vector_db', {}).get('collection_name', 'knowledge_base'),
-    "top_k": YAML_CONFIG.get('vector_db', {}).get('top_k', 5),
+    "db_path": str(CHROMA_DB_PATH),
+    "collection_name": "knowledge_base",
+    "top_k": 5,
 }
 
 # ========================= 核心流程参数 =========================
@@ -77,24 +65,24 @@ TEXT_SPLITTER_CONFIG = {
 # 检索配置
 RETRIEVAL_CONFIG = {
     "top_k": VECTOR_DB_CONFIG["top_k"],
-    "similarity_threshold": YAML_CONFIG.get('retrieval', {}).get('similarity_threshold', 0.7),
-    "max_retrieved_docs": YAML_CONFIG.get('retrieval', {}).get('max_retrieved_docs', 10),
+    "similarity_threshold": 0.7,
     "search_type": "similarity",
+    "max_retrieved_docs": 10,
 }
 
 # 验证-纠正流程配置
 FACT_CHECK_CONFIG = {
     "verification_rounds": 2,
     "hallucination_threshold": 0.7,
-    "confidence_threshold": YAML_CONFIG.get('verification', {}).get('confidence_threshold', 0.8),
-    "max_verification_attempts": YAML_CONFIG.get('verification', {}).get('max_verification_attempts', 3),
+    "confidence_threshold": 0.8,
+    "max_verification_attempts": 3,
     "use_rule_based_check": True,
 }
 
 # 意图分类配置
 INTENT_CONFIG = {
-    "supported_intents": YAML_CONFIG.get('intent', {}).get('supported_intents', ["事实查询", "比较查询", "方法查询", "观点查询"]),
-    "default_intent": YAML_CONFIG.get('intent', {}).get('default_intent', "事实查询"),
+    "supported_intents": ["事实查询", "比较查询", "方法查询", "观点查询"],
+    "default_intent": "事实查询",
 }
 
 # ========================= 实验与日志配置 =========================
@@ -121,18 +109,17 @@ PRINT_PROCESS_LOG = True
 
 # ========================= 配置验证 =========================
 def validate_config():
-    """验证关键配置"""
-    # 验证LLM配置
-    if not LLM_CONFIG["api_key"]:
-        raise ValueError("DEEPSEEK_API_KEY环境变量未设置")
+    """验证配置的完整性"""
+    required_env_vars = ["DEEPSEEK_API_KEY"]
+    for var in required_env_vars:
+        if not os.getenv(var):
+            raise ValueError(f"环境变量 {var} 未设置")
     
-    # 验证向量数据库路径
-    db_path = Path(VECTOR_DB_CONFIG["db_path"])
-    if not db_path.parent.exists():
-        db_path.parent.mkdir(parents=True, exist_ok=True)
+    if not LLM_CONFIG["api_key"]:
+        raise ValueError("DeepSeek API Key 未配置")
     
     print("✓ 配置验证通过")
 
 # 启动时验证配置
-if __name__ == "__main__":
+if __name__ != "__main__":
     validate_config()
