@@ -9,10 +9,14 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.resolve()
 
 # 数据存储路径
-RAW_DOCS_PATH = PROJECT_ROOT / "data" / "cleaned_data"
-PROCESSED_DOCS_PATH = PROJECT_ROOT / "data" / "processed_docs"
-CHROMA_DB_PATH = PROJECT_ROOT / "data" / "chroma_db"
-DATASETS_PATH = PROJECT_ROOT / "experiments" / "datasets"
+#RAW_DOCS_PATH = PROJECT_ROOT / "data" / "cleaned_data"
+#PROCESSED_DOCS_PATH = PROJECT_ROOT / "data" / "processed_docs"
+#CHROMA_DB_PATH = PROJECT_ROOT / "data" / "chroma_db"
+#DATASETS_PATH = PROJECT_ROOT / "experiments" / "datasets"
+RAW_DOCS_PATH = Path("./data/cleaned_data")
+PROCESSED_DOCS_PATH = Path("./data/processed_docs")
+CHROMA_DB_PATH = Path("./data/chroma_db")
+DATASETS_PATH = Path("./experiments/datasets")
 
 # 结果输出路径
 LOGS_PATH = PROJECT_ROOT / "results" / "logs"
