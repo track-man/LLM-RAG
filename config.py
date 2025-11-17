@@ -30,7 +30,7 @@ for path in [
 LLM_CONFIG = {
     "provider": "deepseek",
     "api_key": os.getenv("DEEPSEEK_API_KEY", ""),
-    "base_url": "https://api.deepseek.com/v1/chat/completions",
+    "base_url": "https://api.deepseek.com/v1",
     "model_name": "deepseek-chat",
     "temperature": 0.1,
     "max_tokens": 1000,
