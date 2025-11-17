@@ -1,5 +1,4 @@
 import os
-import yaml
 from pathlib import Path
 from dotenv import load_dotenv
 #将 config.yaml 的内容统一到 全局的config.py 中，暂时放在这
