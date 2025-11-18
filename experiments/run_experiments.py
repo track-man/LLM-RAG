@@ -38,6 +38,16 @@ class ExperimentRunner:
     def __init__(self):
         self.evaluator = ExperimentEvaluator()
         self.config = EXPERIMENT_CONFIG
+        # 初始化中间结果存储目录
+        self._init_intermediate_dir()
+
+    def _init_intermediate_dir(self):
+        """初始化中间结果存储目录"""
+        self.intermediate_dir = os.path.join(
+            project_root, self.config["output_paths"]["results"], "intermediate"
+        )
+        os.makedirs(self.intermediate_dir, exist_ok=True)
+        logger.info(f"中间结果将保存至: {self.intermediate_dir}")
 
     def load_test_dataset(self) -> List[Dict]:
         """加载测试数据集"""
@@ -67,7 +77,19 @@ class ExperimentRunner:
         logger.info("开始运行原始DeepSeek-V3模型...")
 
         results = []
-        for i, sample in enumerate(test_data):
+        total_samples = len(test_data)
+        
+        # 检查是否有中间结果
+        latest_batch = self._get_latest_batch("baseline")
+        if latest_batch > 0:
+            logger.info(f"发现中间结果，从第 {latest_batch} 个样本继续运行")
+            results = self._load_intermediate_results("baseline", latest_batch)
+            start_idx = latest_batch
+        else:
+            start_idx = 0
+
+        for i in range(start_idx, total_samples):
+            sample = test_data[i]
             try:
                 start_time = time.time()
 
@@ -89,8 +111,14 @@ class ExperimentRunner:
 
                 results.append(result)
 
-                if (i + 1) % 5 == 0:  # 每5个样本输出一次进度
-                    logger.info(f"基线模型已完成 {i + 1}/{len(test_data)} 个样本")
+                # 每10个样本保存一次中间结果
+                if (i + 1) % 10 == 0:
+                    logger.info(f"基线模型已完成 {i + 1}/{total_samples} 个样本，保存中间结果...")
+                    self._save_intermediate_results("baseline", results, i + 1)
+
+                # 每5个样本输出一次进度（保持原有进度提示）
+                if (i + 1) % 5 == 0:
+                    logger.info(f"基线模型已完成 {i + 1}/{total_samples} 个样本")
 
             except Exception as e:
                 logger.error(f"处理样本 {i} 时出错: {e}")
@@ -106,8 +134,12 @@ class ExperimentRunner:
                     'error': True
                 }
                 results.append(result)
+                # 出错时也保存一次中间结果
+                self._save_intermediate_results("baseline", results, i + 1)
                 continue
 
+        # 完成后保存最终结果
+        self._save_intermediate_results("baseline", results, total_samples, is_final=True)
         return results
 
     @staticmethod
@@ -116,7 +148,21 @@ class ExperimentRunner:
         logger.info("开始运行RAG系统...")
 
         results = []
-        for i, sample in enumerate(test_data):
+        total_samples = len(test_data)
+        
+        # 检查是否有中间结果
+        latest_batch = ExperimentRunner._get_latest_batch("rag", project_root, EXPERIMENT_CONFIG)
+        if latest_batch > 0:
+            logger.info(f"发现中间结果，从第 {latest_batch} 个样本继续运行")
+            results = ExperimentRunner._load_intermediate_results(
+                "rag", latest_batch, project_root, EXPERIMENT_CONFIG
+            )
+            start_idx = latest_batch
+        else:
+            start_idx = 0
+
+        for i in range(start_idx, total_samples):
+            sample = test_data[i]
             try:
                 start_time = time.time()
 
@@ -144,8 +190,16 @@ class ExperimentRunner:
 
                 results.append(result)
 
-                if (i + 1) % 5 == 0:  # 每5个样本输出一次进度
-                    logger.info(f"RAG系统已完成 {i + 1}/{len(test_data)} 个样本")
+                # 每10个样本保存一次中间结果
+                if (i + 1) % 10 == 0:
+                    logger.info(f"RAG系统已完成 {i + 1}/{total_samples} 个样本，保存中间结果...")
+                    ExperimentRunner._save_intermediate_results(
+                        "rag", results, i + 1, project_root, EXPERIMENT_CONFIG
+                    )
+
+                # 每5个样本输出一次进度（保持原有进度提示）
+                if (i + 1) % 5 == 0:
+                    logger.info(f"RAG系统已完成 {i + 1}/{total_samples} 个样本")
 
             except Exception as e:
                 logger.error(f"处理样本 {i} 时出错: {e}")
@@ -161,11 +215,18 @@ class ExperimentRunner:
                     'error': True
                 }
                 results.append(result)
+                # 出错时也保存一次中间结果
+                ExperimentRunner._save_intermediate_results(
+                    "rag", results, i + 1, project_root, EXPERIMENT_CONFIG
+                )
                 continue
 
+        # 完成后保存最终结果
+        ExperimentRunner._save_intermediate_results(
+            "rag", results, total_samples, project_root, EXPERIMENT_CONFIG, is_final=True
+        )
         return results
 
-    # 其余方法保持不变...
     def save_results(self, results: List[Dict], filename: str):
         """保存结果到文件"""
         output_dir = self.config["output_paths"]["results"]
@@ -333,6 +394,108 @@ class ExperimentRunner:
             f.write(md_content)
 
         print(f"Markdown报告已保存: {md_path}")
+
+    # 中间结果处理相关方法
+    def _get_latest_batch(self, model_type: str) -> int:
+        """获取最新已完成的批次编号"""
+        return ExperimentRunner._get_latest_batch_static(
+            model_type, self.intermediate_dir
+        )
+
+    @staticmethod
+    def _get_latest_batch(model_type: str, project_root: str, config: Dict) -> int:
+        """静态方法：获取最新已完成的批次编号"""
+        intermediate_dir = os.path.join(
+            project_root, config["output_paths"]["results"], "intermediate"
+        )
+        return ExperimentRunner._get_latest_batch_static(model_type, intermediate_dir)
+
+    @staticmethod
+    def _get_latest_batch_static(model_type: str, intermediate_dir: str) -> int:
+        """静态辅助方法：获取最新已完成的批次编号"""
+        if not os.path.exists(intermediate_dir):
+            return 0
+
+        max_batch = 0
+        for filename in os.listdir(intermediate_dir):
+            if filename.startswith(f"{model_type}_results_batch_") and filename.endswith(".json"):
+                try:
+                    # 提取批次编号（如 "baseline_results_batch_10.json" -> 10）
+                    batch_num = int(filename.split("_")[-1].split(".")[0])
+                    if batch_num > max_batch:
+                        max_batch = batch_num
+                except (ValueError, IndexError):
+                    continue
+        return max_batch
+
+    def _load_intermediate_results(self, model_type: str, batch_num: int) -> List[Dict]:
+        """加载中间结果"""
+        return ExperimentRunner._load_intermediate_results_static(
+            model_type, batch_num, self.intermediate_dir
+        )
+
+    @staticmethod
+    def _load_intermediate_results(
+        model_type: str, batch_num: int, project_root: str, config: Dict
+    ) -> List[Dict]:
+        """静态方法：加载中间结果"""
+        intermediate_dir = os.path.join(
+            project_root, config["output_paths"]["results"], "intermediate"
+        )
+        return ExperimentRunner._load_intermediate_results_static(
+            model_type, batch_num, intermediate_dir
+        )
+
+    @staticmethod
+    def _load_intermediate_results_static(
+        model_type: str, batch_num: int, intermediate_dir: str
+    ) -> List[Dict]:
+        """静态辅助方法：加载中间结果"""
+        filepath = os.path.join(intermediate_dir, f"{model_type}_results_batch_{batch_num}.json")
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return []
+
+    def _save_intermediate_results(
+        self, model_type: str, results: List[Dict], batch_num: int, is_final: bool = False
+    ):
+        """保存中间结果"""
+        ExperimentRunner._save_intermediate_results_static(
+            model_type, results, batch_num, self.intermediate_dir, is_final
+        )
+
+    @staticmethod
+    def _save_intermediate_results(
+        model_type: str, results: List[Dict], batch_num: int, project_root: str, config: Dict,
+        is_final: bool = False
+    ):
+        """静态方法：保存中间结果"""
+        intermediate_dir = os.path.join(
+            project_root, config["output_paths"]["results"], "intermediate"
+        )
+        ExperimentRunner._save_intermediate_results_static(
+            model_type, results, batch_num, intermediate_dir, is_final
+        )
+
+    @staticmethod
+    def _save_intermediate_results_static(
+        model_type: str, results: List[Dict], batch_num: int, intermediate_dir: str,
+        is_final: bool = False
+    ):
+        """静态辅助方法：保存中间结果"""
+        filename = f"{model_type}_results_batch_{batch_num}.json"
+        filepath = os.path.join(intermediate_dir, filename)
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        
+        # 如果是最终结果，同时创建一个标识文件
+        if is_final:
+            final_flag = os.path.join(intermediate_dir, f"{model_type}_results_final.txt")
+            with open(final_flag, 'w', encoding='utf-8') as f:
+                f.write(f"Completed at: {datetime.now().isoformat()}\n")
+                f.write(f"Total samples: {len(results)}")
 
 
 def main():
