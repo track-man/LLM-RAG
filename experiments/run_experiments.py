@@ -22,7 +22,7 @@ logger = logging.getLogger("experiments")
 try:
     from src.core.rag_pipeline import rag_with_fact_checking
     # 修改导入路径，使用您现有的 deepseek_client
-    from src.llm2_0.deepseek_client import llm_inference
+    from src.llm2.deepseek_client import llm_inference
     from experiments.evaluation_metrics import ExperimentEvaluator
     from experiments.experiment_config import EXPERIMENT_CONFIG
     import config
