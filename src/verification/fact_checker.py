@@ -388,7 +388,7 @@ LLM回答:
                     self.logger.error("API响应格式异常")
                     return None
             else:
-                self.logger.error(f"API调用失败: {response.status_code} - {response.text}")
+                
                 return None
 
         except requests.exceptions.RequestException as e:

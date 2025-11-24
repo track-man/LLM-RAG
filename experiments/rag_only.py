@@ -143,6 +143,9 @@ class ExperimentRunner:
                     
                     logger.info(f"RAG系统已完成 {i + 1}/{total_samples} 个样本 "
                                 f"({(i + 1) / total_samples * 100:.1f}%)")
+                    print("RAG系统已完成 {}/{} 个样本 ({:.1f}%)".format(
+                        i + 1, total_samples, (i + 1) / total_samples * 100
+                    ))
 
             except Exception as e:
                 logger.error(f"处理样本 {i} 时出错: {e}")

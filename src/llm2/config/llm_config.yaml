@@ -1,13 +1,19 @@
 # LLM配置
+import os
+from dotenv import load_dotenv
+
+# 加载.env文件中的敏感信息
+load_dotenv()
+
 deepseek:
   provider: "deepseek"
-  api_key: "sk-7d246719b6c34befb7ebf10baa75501e"  # 从环境变量读取
-  base_url: "https://api.deepseek.com/v1"
+  api_key: os.getenv("DEEPSEEK_API_KEY", "") # 从环境变量读取
+  base_url: "https://api.deepseek.com/v1"  # 修改后的DeepSeek API路径
   model: "deepseek-chat"
   max_tokens: 2000
   temperature: 0.1
   timeout: 30
-
+  
 openai:
   provider: "openai"
   api_key: "${OPENAI_API_KEY}"
