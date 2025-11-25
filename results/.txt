@@ -1,0 +1,1 @@
+测试集文件地址分别为同目录下的base.json或rag.json
